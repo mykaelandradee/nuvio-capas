@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Nuvio Studio · capas, logos e hero</title>
+<meta name="description" content="Gerador gratuito de capas de pasta, logos e fundos de hero para coleções do Nuvio. Roda no seu navegador, sem cadastro.">
+<meta name="referrer" content="no-referrer">
+<meta property="og:title" content="Nuvio Studio · capas, logos e hero">
+<meta property="og:description" content="Gerador gratuito de capas de pasta, logos e fundos de hero para coleções do Nuvio. Roda no seu navegador.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🎬%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo+Black&family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@800&family=Playfair+Display:wght@800&display=swap" rel="stylesheet">
@@ -70,6 +76,8 @@ input[type=color]{width:100%;height:42px;border:0;border-radius:12px;background:
 .thumbs button{padding:0;border:0;border-radius:10px;overflow:hidden;cursor:pointer}
 .thumbs img{width:100%;display:block}
 [hidden]{display:none!important}
+.foot{max-width:1320px;margin:0 auto;padding:0 22px 28px;color:var(--muted);font-size:12.5px;line-height:1.6}
+.foot a{color:inherit}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 </style>
 </head>
@@ -138,10 +146,10 @@ de Ação</textarea>
   <details data-m="cover hero"><summary>Fundo com imagem</summary><div class="body">
     <label for="bgfile">Enviar imagem</label><input type="file" id="bgfile" accept="image/*">
     <label for="tkey">Chave do TMDB (API Read Access Token)</label><input type="password" id="tkey" autocomplete="off">
-    <p class="msg" id="kmsg">A chave fica salva só neste navegador.</p><button class="ghost" id="forgetKey">Esquecer chave</button>
+    <p class="msg" id="kmsg">A chave fica salva só neste navegador e nunca é enviada a outro lugar além do TMDB. Não use em computador compartilhado.</p><button class="ghost" id="forgetKey">Esquecer chave</button>
     <label for="tq">Buscar filme ou série no TMDB</label>
     <div class="row"><input type="search" id="tq"><button class="ghost" id="tgo" style="flex:0">Buscar</button></div>
-    <p class="msg" id="tmsg">A busca no TMDB funciona só na versão publicada no seu site ou baixada. Aqui, envie uma imagem.</p>
+    <p class="msg" id="tmsg">Use seu token gratuito do TMDB (em themoviedb.org, Configurações → API) ou envie sua própria imagem.</p>
     <div id="tres"></div><div class="thumbs" id="tthumbs"></div>
     <label for="dark">Escurecer imagem</label><input type="range" id="dark" data-k="dark" min="0" max="90">
     <label for="tint">Cor da paleta sobre a imagem</label><input type="range" id="tint" data-k="tint" min="0" max="100">
@@ -164,6 +172,10 @@ de Ação</textarea>
   </div></details>
 </aside>
 </main>
+<footer class="foot">
+  <p>Ferramenta não oficial, sem vínculo com Nuvio, Xperience ou TMDB. Suas imagens são processadas no seu navegador e nada é enviado para um servidor desta página; apenas as buscas ao TMDB saem daqui, direto para o TMDB. Sem cadastro, cookies ou rastreamento.</p>
+  <p>This product uses the TMDB API but is not endorsed or certified by <a href="https://www.themoviedb.org" target="_blank" rel="noopener noreferrer">TMDB</a>.</p>
+</footer>
 
 <script>
 const FW={"Bebas Neue":400,"Anton":400,"Montserrat":800,"Playfair Display":800,"Archivo Black":400};
@@ -238,7 +250,7 @@ document.querySelectorAll("[data-k]").forEach(el=>el.addEventListener("input",()
 document.querySelectorAll("#fmt button").forEach(b=>b.onclick=()=>{o.fmt=b.dataset.v;document.querySelectorAll("#fmt button").forEach(x=>x.setAttribute("aria-pressed",x===b));render()});
 document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>{o.mode=b.dataset.mode;document.querySelectorAll("#tabs button").forEach(x=>x.setAttribute("aria-pressed",x===b));applyMode();render()});
 PRE.forEach(([a,b])=>{const e=document.createElement("button");e.style.background="linear-gradient(135deg,"+a+","+b+")";e.setAttribute("aria-label","Paleta "+a);e.onclick=()=>{o.c1=a;o.c2=b;sync();render()};$("presets").appendChild(e)});
-const loadImg=(f,cb)=>{if(!f||!f.type.startsWith("image/"))return;const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>cb(im);im.src=r.result};r.readAsDataURL(f)};
+const loadImg=(f,cb)=>{if(!f||!f.type.startsWith("image/"))return;if(f.size>25*1024*1024){$("msg").textContent="Imagem muito grande (máximo de 25 MB).";return}const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>cb(im);im.src=r.result};r.readAsDataURL(f)};
 $("file").onchange=e=>loadImg(e.target.files[0],im=>{o.img=im;render()});
 $("rmLogo").onclick=()=>{o.img=null;$("file").value="";render()};
 $("bgfile").onchange=e=>{const f=e.target.files[0];loadImg(f,im=>setBg(im,f))};
@@ -268,7 +280,7 @@ async function tm(path,params){const k=$("tkey").value.trim();if(!k)throw new Er
   const u=new URL(TM+path);Object.entries(params||{}).forEach(([a,b])=>u.searchParams.set(a,b));
   const h={};if(k.startsWith("eyJ"))h.Authorization="Bearer "+k;else u.searchParams.set("api_key",k);
   const r=await fetch(u,{headers:h});if(!r.ok)throw new Error("http"+r.status);return r.json()}
-const terr=e=>e.message==="key"?"Cole sua chave do TMDB primeiro.":e.message==="http401"?"Chave do TMDB inválida.":"Sem acesso ao TMDB. Essa busca só funciona fora do ambiente de prévia.";
+const terr=e=>e.message==="key"?"Cole sua chave do TMDB primeiro.":e.message==="http401"?"Chave do TMDB inválida.":"Não foi possível falar com o TMDB. Verifique a conexão e a chave, ou envie uma imagem.";
 $("tgo").onclick=async()=>{const q=$("tq").value.trim();if(!q)return;tmsg("Buscando...");$("tres").innerHTML="";$("tthumbs").innerHTML="";
   try{const d=await tm("/search/multi",{query:q,language:"pt-BR"});
     const rs=d.results.filter(x=>x.media_type==="movie"||x.media_type==="tv").slice(0,8);
@@ -301,9 +313,19 @@ $("dl").onclick=()=>{
 };
 const PK=["text","font","fmt","layout","c1","c2","tc","angle","glow","vig","scale","logoScale","dark","tint","blur","logoW","heroRes","fade","heroText","ty"];
 function save(){try{const s={};PK.forEach(k=>s[k]=o[k]);localStorage.setItem("nuvio_cfg",JSON.stringify(s))}catch(e){}}
-try{const s=JSON.parse(localStorage.getItem("nuvio_cfg")||"null");if(s)PK.forEach(k=>{if(k in s)o[k]=s[k]})}catch(e){}
+try{const s=JSON.parse(localStorage.getItem("nuvio_cfg")||"null");if(s&&typeof s==="object")PK.forEach(k=>{if(!(k in s))return;const v=s[k];
+  if(typeof v!==typeof o[k])return;
+  if(k==="fmt"&&!SIZES[v])return;
+  if(k==="font"&&!FW[v])return;
+  if(k==="layout"&&!["center","bottom","band","text"].includes(v))return;
+  if(k==="logoW"&&!["1200","1600","2400"].includes(v))return;
+  if(k==="heroRes"&&!["1920","3840"].includes(v))return;
+  if((k==="c1"||k==="c2"||k==="tc")&&!/^#[0-9a-f]{6}$/i.test(v))return;
+  if(typeof v==="number"&&!isFinite(v))return;
+  if(typeof v==="string"&&v.length>200)return;
+  o[k]=v})}catch(e){}
 document.querySelectorAll("#fmt button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.v===o.fmt));
-let mine=[];try{mine=JSON.parse(localStorage.getItem("nuvio_pal")||"[]")}catch(e){}
+let mine=[];try{const m=JSON.parse(localStorage.getItem("nuvio_pal")||"[]"),hx=/^#[0-9a-f]{6}$/i;mine=(Array.isArray(m)?m:[]).filter(p=>Array.isArray(p)&&hx.test(p[0])&&hx.test(p[1])).slice(-16)}catch(e){}
 function drawPal(){const g=$("mypal");g.innerHTML="";mine.forEach(([a,b],i)=>{const e=document.createElement("button");e.style.background="linear-gradient(135deg,"+a+","+b+")";e.setAttribute("aria-label","Paleta salva "+(i+1));e.onclick=()=>{o.c1=a;o.c2=b;sync();render()};g.appendChild(e)})}
 $("savePal").onclick=()=>{if(!mine.some(p=>p[0]===o.c1&&p[1]===o.c2))mine.push([o.c1,o.c2]);mine=mine.slice(-16);try{localStorage.setItem("nuvio_pal",JSON.stringify(mine));$("msg").textContent="Paleta salva neste navegador."}catch(e){$("msg").textContent="Este ambiente não permite salvar."}drawPal()};
 $("clrPal").onclick=()=>{mine=[];try{localStorage.removeItem("nuvio_pal")}catch(e){}drawPal()};
