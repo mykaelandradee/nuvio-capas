@@ -104,6 +104,7 @@ de Ação</textarea>
     <input type="color" id="tc" data-k="tc">
     <div data-m="cover hero"><label for="scale">Tamanho do texto</label><input type="range" id="scale" data-k="scale" min="50" max="115"></div>
     <label class="chk" data-m="hero"><input type="checkbox" id="heroText" data-k="heroText"> Incluir texto no fundo do hero</label>
+    <div data-m="cover hero"><label for="ty">Posição vertical do texto</label><input type="range" id="ty" data-k="ty" min="-40" max="40"></div>
   </div></details>
 
   <details open><summary>Formato</summary><div class="body">
@@ -126,6 +127,8 @@ de Ação</textarea>
 
   <details open data-m="cover hero"><summary>Cores e brilho</summary><div class="body">
     <div class="presets" id="presets"></div>
+    <div class="presets" id="mypal" style="margin-top:8px"></div>
+    <div class="row" style="margin-top:10px"><button class="ghost" id="savePal">Salvar esta paleta</button><button class="ghost" id="clrPal">Limpar salvas</button></div>
     <div class="row" style="margin-top:12px"><div><label for="c1">Cor A</label><input type="color" id="c1" data-k="c1"></div><div><label for="c2">Cor B</label><input type="color" id="c2" data-k="c2"></div></div>
     <label for="angle">Ângulo do degradê</label><input type="range" id="angle" data-k="angle" min="0" max="360">
     <label for="glow">Brilho</label><input type="range" id="glow" data-k="glow" min="0" max="100">
@@ -135,6 +138,7 @@ de Ação</textarea>
   <details data-m="cover hero"><summary>Fundo com imagem</summary><div class="body">
     <label for="bgfile">Enviar imagem</label><input type="file" id="bgfile" accept="image/*">
     <label for="tkey">Chave do TMDB (API Read Access Token)</label><input type="password" id="tkey" autocomplete="off">
+    <p class="msg" id="kmsg">A chave fica salva só neste navegador.</p><button class="ghost" id="forgetKey">Esquecer chave</button>
     <label for="tq">Buscar filme ou série no TMDB</label>
     <div class="row"><input type="search" id="tq"><button class="ghost" id="tgo" style="flex:0">Buscar</button></div>
     <p class="msg" id="tmsg">A busca no TMDB funciona só na versão publicada no seu site ou baixada. Aqui, envie uma imagem.</p>
@@ -143,6 +147,14 @@ de Ação</textarea>
     <label for="tint">Cor da paleta sobre a imagem</label><input type="range" id="tint" data-k="tint" min="0" max="100">
     <label for="blur">Desfoque</label><input type="range" id="blur" data-k="blur" min="0" max="20">
     <button class="ghost" id="rmBg">Remover fundo</button>
+  </div></details>
+
+  <details data-m="cover hero"><summary>Profundidade</summary><div class="body">
+    <p class="msg">O texto fica entre o fundo e o assunto principal da imagem. Para isso é preciso um recorte do assunto, sem fundo.</p>
+    <button class="ghost" id="autoCut">Recortar assunto automaticamente</button>
+    <label for="cutfile">Ou enviar o recorte (PNG transparente)</label><input type="file" id="cutfile" accept="image/png,image/webp">
+    <p class="msg" id="cmsg"></p>
+    <button class="ghost" id="rmCut">Remover recorte</button>
   </div></details>
 
   <details data-m="cover logo"><summary>Ícone ou logo própria</summary><div class="body">
@@ -157,7 +169,7 @@ de Ação</textarea>
 const FW={"Bebas Neue":400,"Anton":400,"Montserrat":800,"Playfair Display":800,"Archivo Black":400};
 const SIZES={land:[1280,720],poster:[800,1200],square:[1000,1000]};
 const PRE=[["#e50914","#140506"],["#2563eb","#050b24"],["#8b5cf6","#12062b"],["#10b981","#031a12"],["#f97316","#1f0a02"],["#ec4899","#240716"],["#f5c542","#1a1403"],["#6b7488","#0b0d12"]];
-const o={text:"Filmes\nde Ação",font:"Bebas Neue",fmt:"land",layout:"center",c1:PRE[0][0],c2:PRE[0][1],tc:"#ffffff",angle:135,glow:35,vig:true,scale:100,logoScale:100,img:null,bg:null,dark:30,tint:45,blur:0,logoW:"1600",heroRes:"1920",fade:55,heroText:false,mode:"cover"};
+const o={text:"Filmes\nde Ação",font:"Bebas Neue",fmt:"land",layout:"center",c1:PRE[0][0],c2:PRE[0][1],tc:"#ffffff",angle:135,glow:35,vig:true,scale:100,logoScale:100,img:null,bg:null,dark:30,tint:45,blur:0,logoW:"1600",heroRes:"1920",fade:55,heroText:false,ty:0,cut:null,bgBlob:null,mode:"cover"};
 const cv=document.getElementById("cv"),ctx=cv.getContext("2d"),$=id=>document.getElementById(id);
 let tok=0,dl=null;
 const lines=()=>{const l=o.text.split("\n").map(s=>s.trim()).filter(Boolean);return l.length?l:[" "]};
@@ -190,11 +202,13 @@ function paintBg(c,W,H,lay){
   if(o.vig){const vg=c.createRadialGradient(cx,cy,Math.min(W,H)*.35,cx,cy,Math.max(W,H)*.75);vg.addColorStop(0,"rgba(0,0,0,0)");vg.addColorStop(1,"rgba(0,0,0,.55)");c.fillStyle=vg;c.fillRect(0,0,W,H)}
   if(lay==="bottom"){const sg=c.createLinearGradient(0,H*.4,0,H);sg.addColorStop(0,"rgba(0,0,0,0)");sg.addColorStop(1,"rgba(0,0,0,.65)");c.fillStyle=sg;c.fillRect(0,0,W,H)}
 }
+function drawCut(c,W,H){if(!o.cut)return;const im=o.cut,iw=im.naturalWidth,ih=im.naturalHeight,s=Math.max(W/iw,H/ih);c.drawImage(im,(W-iw*s)/2,(H-ih*s)/2,iw*s,ih*s)}
+function txt(c,W,H,l){c.save();c.translate(0,H*o.ty/100);drawBlock(c,W,H,l);c.restore()}
 function paintHero(){
   const W=+o.heroRes,H=W*9/16;cv.width=W;cv.height=H;paintBg(ctx,W,H,"none");
   const f=o.fade/100;let g=ctx.createLinearGradient(0,0,W,0);g.addColorStop(0,"rgba(0,0,0,"+f*.9+")");g.addColorStop(.7,"rgba(0,0,0,0)");ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
   g=ctx.createLinearGradient(0,H*.5,0,H);g.addColorStop(0,"rgba(0,0,0,0)");g.addColorStop(1,"rgba(0,0,0,"+f*.95+")");ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
-  if(o.heroText)drawBlock(ctx,W,H,"bottom");
+  if(o.heroText)txt(ctx,W,H,"bottom");drawCut(ctx,W,H);
 }
 function paintLogo(){
   const L=lines(),n=L.length,B=200,lh=B*1.05;
@@ -215,8 +229,8 @@ async function render(){
   if(t!==tok)return;
   if(o.mode==="logo")paintLogo();
   else if(o.mode==="hero")paintHero();
-  else{const[W,H]=SIZES[o.fmt];cv.width=W;cv.height=H;paintBg(ctx,W,H,o.layout);drawBlock(ctx,W,H,o.layout)}
-  $("dim").textContent=cv.width+" × "+cv.height+" px";$("fallback").hidden=true;
+  else{const[W,H]=SIZES[o.fmt];cv.width=W;cv.height=H;paintBg(ctx,W,H,o.layout);txt(ctx,W,H,o.layout);drawCut(ctx,W,H)}
+  $("dim").textContent=cv.width+" × "+cv.height+" px";$("fallback").hidden=true;save();
 }
 function applyMode(){document.querySelectorAll("[data-m]").forEach(e=>e.hidden=!e.dataset.m.split(" ").includes(o.mode))}
 function sync(){document.querySelectorAll("[data-k]").forEach(el=>{const k=el.dataset.k;if(el.type==="checkbox")el.checked=o[k];else el.value=o[k]})}
@@ -227,12 +241,24 @@ PRE.forEach(([a,b])=>{const e=document.createElement("button");e.style.backgroun
 const loadImg=(f,cb)=>{if(!f||!f.type.startsWith("image/"))return;const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>cb(im);im.src=r.result};r.readAsDataURL(f)};
 $("file").onchange=e=>loadImg(e.target.files[0],im=>{o.img=im;render()});
 $("rmLogo").onclick=()=>{o.img=null;$("file").value="";render()};
-$("bgfile").onchange=e=>loadImg(e.target.files[0],im=>{o.bg=im;render()});
-$("rmBg").onclick=()=>{o.bg=null;$("bgfile").value="";render()};
+$("bgfile").onchange=e=>{const f=e.target.files[0];loadImg(f,im=>setBg(im,f))};
+$("rmBg").onclick=()=>{o.bg=null;o.bgBlob=null;o.cut=null;$("bgfile").value="";$("cmsg").textContent="";render()};
+const setBg=(im,blob)=>{o.bg=im;o.bgBlob=blob||null;o.cut=null;$("cmsg").textContent="";render()};
+const cmsg=t=>{$("cmsg").textContent=t};
+const setCut=blob=>{const im=new Image();im.onload=()=>{o.cut=im;cmsg("Recorte aplicado. Ajuste a posição vertical do texto.");render()};im.src=URL.createObjectURL(blob)};
+$("cutfile").onchange=e=>{const f=e.target.files[0];if(f)setCut(f)};
+$("rmCut").onclick=()=>{o.cut=null;$("cutfile").value="";cmsg("Recorte removido.");render()};
+$("autoCut").onclick=async()=>{
+  if(!o.bgBlob)return cmsg("Escolha ou envie uma imagem de fundo primeiro.");
+  cmsg("Carregando o modelo de recorte. Na primeira vez pode levar alguns minutos.");
+  try{const m=await import("https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.5/+esm");
+    const out=await m.removeBackground(o.bgBlob,{progress:(k,c,t)=>{if(t)cmsg("Baixando modelo: "+Math.round(c/t*100)+"%")}});
+    setCut(out)}
+  catch(e){cmsg("Não foi possível recortar automaticamente aqui. Envie o recorte em PNG transparente.")}};
 const vw=$("view");
 ["dragenter","dragover"].forEach(ev=>vw.addEventListener(ev,e=>{e.preventDefault();if(o.mode!=="logo")vw.classList.add("over")}));
 ["dragleave","drop"].forEach(ev=>vw.addEventListener(ev,e=>{e.preventDefault();vw.classList.remove("over")}));
-vw.addEventListener("drop",e=>{if(o.mode==="logo")return;loadImg(e.dataTransfer.files[0],im=>{o.bg=im;$("msg").textContent="Fundo aplicado.";render()})});
+vw.addEventListener("drop",e=>{if(o.mode==="logo")return;{const f=e.dataTransfer.files[0];loadImg(f,im=>{setBg(im,f);$("msg").textContent="Fundo aplicado."})}});
 $("theme").onclick=()=>{const r=document.documentElement,cur=r.dataset.theme||(matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light");r.dataset.theme=cur==="dark"?"light":"dark"};
 
 const TM="https://api.themoviedb.org/3",tmsg=t=>{$("tmsg").textContent=t};
@@ -259,7 +285,7 @@ async function pickTitle(x){tmsg("Carregando imagens...");$("tthumbs").innerHTML
   }catch(e){tmsg(terr(e))}}
 async function useBackdrop(fp){tmsg("Baixando imagem...");
   try{const r=await fetch("https://image.tmdb.org/t/p/"+(o.mode==="hero"?"original":"w1280")+fp);if(!r.ok)throw new Error("img");
-    const im=new Image();im.onload=()=>{o.bg=im;tmsg("Fundo aplicado.");render()};im.src=URL.createObjectURL(await r.blob())}
+    const bl=await r.blob(),im=new Image();im.onload=()=>{setBg(im,bl);tmsg("Fundo aplicado.")};im.src=URL.createObjectURL(bl)}
   catch(e){tmsg(terr(e))}}
 
 (async()=>{try{if(typeof claude!=="undefined")dl=await claude.use("downloads")}catch(e){}})();
@@ -273,6 +299,17 @@ $("dl").onclick=()=>{
     else{const u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download=name;a.click();$("fimg").src=u;$("fallback").hidden=false;$("msg").textContent="Se o download não começou, clique com o botão direito na imagem abaixo e salve."}
   },"image/png");
 };
+const PK=["text","font","fmt","layout","c1","c2","tc","angle","glow","vig","scale","logoScale","dark","tint","blur","logoW","heroRes","fade","heroText","ty"];
+function save(){try{const s={};PK.forEach(k=>s[k]=o[k]);localStorage.setItem("nuvio_cfg",JSON.stringify(s))}catch(e){}}
+try{const s=JSON.parse(localStorage.getItem("nuvio_cfg")||"null");if(s)PK.forEach(k=>{if(k in s)o[k]=s[k]})}catch(e){}
+document.querySelectorAll("#fmt button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.v===o.fmt));
+let mine=[];try{mine=JSON.parse(localStorage.getItem("nuvio_pal")||"[]")}catch(e){}
+function drawPal(){const g=$("mypal");g.innerHTML="";mine.forEach(([a,b],i)=>{const e=document.createElement("button");e.style.background="linear-gradient(135deg,"+a+","+b+")";e.setAttribute("aria-label","Paleta salva "+(i+1));e.onclick=()=>{o.c1=a;o.c2=b;sync();render()};g.appendChild(e)})}
+$("savePal").onclick=()=>{if(!mine.some(p=>p[0]===o.c1&&p[1]===o.c2))mine.push([o.c1,o.c2]);mine=mine.slice(-16);try{localStorage.setItem("nuvio_pal",JSON.stringify(mine));$("msg").textContent="Paleta salva neste navegador."}catch(e){$("msg").textContent="Este ambiente não permite salvar."}drawPal()};
+$("clrPal").onclick=()=>{mine=[];try{localStorage.removeItem("nuvio_pal")}catch(e){}drawPal()};
+$("tkey").addEventListener("input",()=>{try{localStorage.setItem("tmdbkey",$("tkey").value.trim());$("kmsg").textContent="Chave salva neste navegador."}catch(e){$("kmsg").textContent="Este ambiente não permite salvar a chave."}});
+$("forgetKey").onclick=()=>{$("tkey").value="";try{localStorage.removeItem("tmdbkey")}catch(e){}$("kmsg").textContent="Chave removida."};
+drawPal();
 sync();applyMode();render();
 </script>
 </body>
