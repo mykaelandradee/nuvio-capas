@@ -423,26 +423,22 @@ async function applyBack(p){tmsg("Baixando fundo...");try{const b=await tmImg(p.
 async function applyLogo(fp){tmsg("Baixando logo...");try{o.img=await blobImg(await tmImg(fp,"original"));render();tmsg("Logo aplicada.")}catch(e){tmsg(terr(e))}}
 async function personMovies(r){const d=await tm("/person/"+r.id+"/movie_credits",{language:L2()});let a=r.known_for_department==="Directing"?(d.crew||[]).filter(x=>x.job==="Director"):(d.cast||[]);if(!a.length)a=[...(d.cast||[]),...(d.crew||[])];const seen=new Set();return a.filter(x=>!seen.has(x.id)&&seen.add(x.id)).sort((x,y)=>(y.popularity||0)-(x.popularity||0)).slice(0,12)}
 async function companyMovies(r){return(await tm("/discover/movie",{with_companies:r.id,sort_by:"popularity.desc",language:L2()})).results.slice(0,12)}
-const franchiseKey=s=>normSearch(s).replace(/^(the|a|an|os|as|o|a|um|uma)\\s+/,"");
+const franchiseKey=s=>normSearch(s).replace(/^(the|a|an|os|as|o|a|um|uma)\s+/,"");
 async function sagaAssets(collection,query=""){
   const details=collection.parts?collection:await tm("/collection/"+collection.id,{language:L2()});
-  const parts=[...(details.parts||[])].sort(byPopularity),backPool=[],logoPool=[],fallbackLogos=[];
+  const parts=[...(details.parts||[])].sort(byPopularity),backPool=[],logoPool=[];
   let collectionImages={};
   try{collectionImages=await tm("/collection/"+collection.id+"/images",{include_image_language:langs()})}catch(e){}
   (collectionImages.backdrops||[]).forEach(x=>backPool.push(x));
   (collectionImages.logos||[]).forEach(x=>logoPool.push(x));
-  const target=franchiseKey(query);
   for(const movie of parts.slice(0,30)){
     try{const images=await tm("/movie/"+movie.id+"/images",{include_image_language:langs()});
       textless(images.backdrops).forEach(x=>backPool.push(x));
-      // Only use a film logo as a saga fallback when its title is the generic franchise name.
-      if(target&&franchiseKey(movie.title||movie.name)===target)fallbackLogos.push(...goodLogos(images.logos||[]));
     }catch(e){}
   }
   const unique=a=>[...new Map(a.map(x=>[x.file_path,x])).values()];
   const backs=unique(backPool).sort((a,b)=>(b.vote_average||0)-(a.vote_average||0)||(b.vote_count||0)-(a.vote_count||0));
-  const primaryLogos=unique(logoPool).sort((a,b)=>lp(a)-lp(b)||(b.vote_average||0)-(a.vote_average||0)||(b.vote_count||0)-(a.vote_count||0));
-  const logos=primaryLogos.length?primaryLogos:unique(fallbackLogos).sort((a,b)=>lp(a)-lp(b)||(b.vote_average||0)-(a.vote_average||0)||(b.vote_count||0)-(a.vote_count||0));
+  const logos=unique(goodLogos(logoPool)).sort((a,b)=>lp(a)-lp(b)||(b.vote_average||0)-(a.vote_average||0)||(b.vote_count||0)-(a.vote_count||0));
   return {backs,logos,parts};
 }
 async function firstBackdrop(list){for(const m of [...list].sort(byPopularity).slice(0,20)){const im=await tm("/movie/"+m.id+"/images",{include_image_language:langs()}),b=textless(im.backdrops);if(b.length)return b}return[]}
