@@ -427,7 +427,7 @@ async function sagaAssets(collection){
   const details=collection.parts?collection:await tm("/collection/"+collection.id,{language:L2()});
   const parts=[...(details.parts||[])].sort(byPopularity),backPool=[],logoPool=[];
   let collectionImages={};
-  try{collectionImages=await tm("/collection/"+collection.id+"/images",{include_image_language:"null"})}catch(e){}
+  try{collectionImages=await tm("/collection/"+collection.id+"/images",{include_image_language:langs()})}catch(e){}
   (collectionImages.backdrops||[]).forEach(x=>backPool.push(x));
   (collectionImages.logos||[]).forEach(x=>logoPool.push(x));
   for(const movie of parts.slice(0,30)){
