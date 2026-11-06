@@ -132,7 +132,7 @@ input[type=color]{width:100%;height:42px;border:0;border-radius:12px;background:
     <label for="tq">Nome</label>
     <div class="row"><input type="search" id="tq" placeholder="Ex.: Harry Potter"><button class="ghost" id="tgo" style="flex:0">Buscar</button></div>
     <label for="sagaLogo">Logo para sagas e estúdios</label>
-    <select id="sagaLogo" data-k="sagaLogo"><option value="text">Genérica: nome da coleção no seu estilo</option><option value="film">Logo original do TMDB (filme/estúdio)</option></select>
+    <select id="sagaLogo" data-k="sagaLogo"><option value="text">Genérica: nome da coleção no seu estilo</option><option value="film" selected>Logo original do TMDB (filme/estúdio)</option></select>
     <button class="primary full" id="tauto">⚡ Montar automaticamente</button>
     <label class="chk"><input type="checkbox" id="autoText" data-k="autoText"> Usar o nome encontrado como texto</label>
     <p class="msg" id="tmsg">Cole seu token gratuito (themoviedb.org, Configurações, API) e busque. O automático escolhe o melhor fundo e a logo.</p>
@@ -251,7 +251,7 @@ const FONTS=[["Bebas Neue",400],["Anton",400],["Oswald",700],["Bungee",400],["Ci
 const FW={};
 const SIZES={land:[1280,720],poster:[800,1200],square:[1000,1000]};
 const PRE=[["#e50914","#140506"],["#2563eb","#050b24"],["#8b5cf6","#12062b"],["#10b981","#031a12"],["#f97316","#1f0a02"],["#ec4899","#240716"],["#f5c542","#1a1403"],["#6b7488","#0b0d12"]];
-const D={text:"Filmes\nde Ação",font:"Bebas Neue",fmt:"land",layout:"center",c1:PRE[0][0],c2:PRE[0][1],tc:"#ffffff",strokeC:"#000000",angle:135,glow:35,vig:true,scale:100,upper:false,ls:0,lineH:102,stroke:0,shadow:50,ty:0,tx:0,textOpacity:100,logoScale:100,lx:0,ly:0,tmode:"both",heroText:false,bz:100,bx:0,by:0,dark:30,tint:45,blur:0,bri:100,con:100,sat:100,gray:0,logoW:"1600",heroRes:"1920",fade:55,exp:"image/png",q:92,autoText:true,stype:"title",sagaLogo:"text"};
+const D={text:"Filmes\nde Ação",font:"Bebas Neue",fmt:"land",layout:"center",c1:PRE[0][0],c2:PRE[0][1],tc:"#ffffff",strokeC:"#000000",angle:135,glow:35,vig:true,scale:100,upper:false,ls:0,lineH:102,stroke:0,shadow:50,ty:0,tx:0,textOpacity:100,logoScale:100,lx:0,ly:0,tmode:"both",heroText:false,bz:100,bx:0,by:0,dark:30,tint:45,blur:0,bri:100,con:100,sat:100,gray:0,logoW:"1600",heroRes:"1920",fade:55,exp:"image/png",q:92,autoText:true,stype:"title",sagaLogo:"film"};
 const PK=Object.keys(D);
 const o={...D,img:null,bg:null,bgBlob:null,cut:null,mode:"cover"};
 const cv=document.getElementById("cv"),$=id=>document.getElementById(id);
@@ -411,7 +411,7 @@ async function applyBack(p){tmsg("Baixando fundo...");try{const b=await tmImg(p.
 async function applyLogo(fp){tmsg("Baixando logo...");try{o.img=await blobImg(await tmImg(fp,"original"));render();tmsg("Logo aplicada.")}catch(e){tmsg(terr(e))}}
 async function personMovies(r){const d=await tm("/person/"+r.id+"/movie_credits",{language:L2()});let a=r.known_for_department==="Directing"?(d.crew||[]).filter(x=>x.job==="Director"):(d.cast||[]);if(!a.length)a=[...(d.cast||[]),...(d.crew||[])];const seen=new Set();return a.filter(x=>!seen.has(x.id)&&seen.add(x.id)).sort((x,y)=>(y.popularity||0)-(x.popularity||0)).slice(0,12)}
 async function companyMovies(r){return(await tm("/discover/movie",{with_companies:r.id,sort_by:"popularity.desc",language:L2()})).results.slice(0,12)}
-async function firstBackdrop(list){for(const m of list.slice(0,4)){const im=await tm("/movie/"+m.id+"/images",{include_image_language:langs()}),b=textless(im.backdrops);if(b.length)return b}return[]}
+async function firstBackdrop(list){for(const m of list.slice(0,10)){const im=await tm("/movie/"+m.id+"/images",{include_image_language:langs()}),b=textless(im.backdrops);if(b.length)return b;const any=rankBackdrops(im.backdrops);if(any.length)return any}return[]}
 function movieBtns(arr,name){const box=$("parts");mkLabel(tr("Filmes de {n}:",{n:name}),box);
   arr.forEach(m=>mkBtn(m.title||m.name,async()=>{tmsg("Carregando imagens de {n}...",{n:m.title||m.name});
     try{const im=await tm("/movie/"+m.id+"/images",{include_image_language:langs()});T.backs=[...T.kb,...textless(im.backdrops)];T.logos=[...T.keep,...goodLogos(im.logos)];showThumbs();tmsg("Clique num fundo ou numa logo para usar.")}catch(e){tmsg(terr(e))}},box))}
@@ -429,7 +429,7 @@ async function tmSearch(){const q=$("tq").value.trim();if(!q)return tmsg("Digite
 async function pickItem(x){const name=x.title||x.name,k=x.media_type;tmsg("Carregando imagens de {n}...",{n:name});$("parts").innerHTML="";T.keep=[];T.kb=[];
   if($("autoText").checked){o.text=k==="collection"?cleanSaga(name):name;sync();render()}
   try{
-    if(k==="collection"){const[d,im]=await Promise.all([tm("/collection/"+x.id,{language:L2()}),tm("/collection/"+x.id+"/images",{include_image_language:"null"})]);
+    if(k==="collection"){const[d,im]=await Promise.all([tm("/collection/"+x.id,{language:L2()}),tm("/collection/"+x.id+"/images",{include_image_language:langs()})]);
       T.backs=im.backdrops||[];T.logos=[];
       mkBtn("Logo genérica (só o nome)",()=>{o.img=null;o.text=cleanSaga(name);sync();render();tmsg("Logo genérica aplicada: só o nome da saga.")},$("parts"));
       mkLabel(tr("Ou a logo de um filme da saga:"),$("parts"));
@@ -451,13 +451,13 @@ async function tmBest(q){const lg=L2(),film=o.sagaLogo==="film";
   const m=a.results.find(x=>x.media_type==="movie"||x.media_type==="tv");
   let col=[...c.results].sort((a,b)=>matchScore(b.name,q)-matchScore(a.name,q)||(b.parts?.length||0)-(a.parts?.length||0))[0];
   if(col&&matchScore(col.name,q)<35)col=null;
-  if(!col&&m&&m.media_type==="movie"&&(m.title||"").toLowerCase()!==q.toLowerCase()){try{const d=await tm("/movie/"+m.id,{language:lg});if(d.belongs_to_collection)col=d.belongs_to_collection}catch(e){}}
+  if(!col&&m&&m.media_type==="movie"){try{const d=await tm("/movie/"+m.id,{language:lg});if(d.belongs_to_collection)col=d.belongs_to_collection}catch(e){}}
   if(col){const[d,im]=await Promise.all([tm("/collection/"+col.id,{language:lg}),tm("/collection/"+col.id+"/images",{include_image_language:"null"})]);
-    const ps=(d.parts||[]).sort(byDate);let backs=im.backdrops||[],logos=[];
+    const ps=(d.parts||[]).slice().sort((a,b)=>(b.popularity||0)-(a.popularity||0));let backs=rankBackdrops(im.backdrops),logos=[];
     if(!backs.length&&ps.length)backs=await firstBackdrop(ps);
-    if(film&&ps[0])logos=goodLogos((await tm("/movie/"+ps[0].id+"/images",{include_image_language:langs()})).logos);
+    if(film){for(const p of ps.slice(0,10)){const li=await tm("/movie/"+p.id+"/images",{include_image_language:langs()});logos=goodLogos(li.logos);if(logos.length)break}}
     return{name:col.name,text:cleanSaga(col.name),backs,logos}}
-  if(m){const im=await tm("/"+m.media_type+"/"+m.id+"/images",{include_image_language:langs()});return{name:m.title||m.name,text:m.title||m.name,backs:textless(im.backdrops),logos:goodLogos(im.logos)}}
+  if(m){const im=await tm("/"+m.media_type+"/"+m.id+"/images",{include_image_language:langs()});return{name:m.title||m.name,text:m.title||m.name,backs:(textless(im.backdrops).length?textless(im.backdrops):rankBackdrops(im.backdrops)),logos:goodLogos(im.logos)}}
   throw new Error("none")}
 $("tgo").onclick=tmSearch;$("tq").addEventListener("keydown",e=>{if(e.key==="Enter")tmSearch()});
 $("tauto").onclick=async()=>{const q=$("tq").value.trim();if(!q)return tmsg("Digite o nome primeiro.");tmsg("Montando...");
