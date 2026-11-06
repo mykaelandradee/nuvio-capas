@@ -257,7 +257,7 @@ function applyLang(){const en=lang==="en",f=x=>en&&EN[x]||x;document.documentEle
   TN.forEach(([n,p])=>{n.nodeValue=p.match(/^\s*/)[0]+f(p.trim())+p.match(/\s*$/)[0]});
   AT.forEach(([e,a,p])=>e.setAttribute(a,f(p)));OP.forEach(([op,p])=>op.textContent=f(p));
   const title=$("text"),defaults=["Ação","Action"];
-  if(defaults.includes(title.value)){title.value=en?"Action":"Ação";o.text=title.value}
+  if(defaults.includes(title.value)){title.value=en?"Action":"Ação";o.text=title.value;sync();render()}
   document.title=f("Nuvio Studio · capas, logos e hero");$("lang").textContent=en?"PT":"EN"}
 
 const msg=(t,v)=>{$("msg").textContent=tr(t,v)};
@@ -425,18 +425,20 @@ async function personMovies(r){const d=await tm("/person/"+r.id+"/movie_credits"
 async function companyMovies(r){return(await tm("/discover/movie",{with_companies:r.id,sort_by:"popularity.desc",language:L2()})).results.slice(0,12)}
 async function sagaAssets(collection){
   const details=collection.parts?collection:await tm("/collection/"+collection.id,{language:L2()});
-  const parts=[...(details.parts||[])].sort(byPopularity);
-  let backs=[],logos=[];
-  for(const movie of parts.slice(0,20)){
-    const images=await tm("/movie/"+movie.id+"/images",{include_image_language:langs()});
-    if(!backs.length)backs=textless(images.backdrops).sort((a,b)=>(b.vote_average||0)-(a.vote_average||0)||(b.vote_count||0)-(a.vote_count||0));
-    if(!logos.length)logos=goodLogos(images.logos).sort((a,b)=>(b.vote_average||0)-(a.vote_average||0)||(b.vote_count||0)-(a.vote_count||0));
-    if(backs.length&&logos.length)break;
+  const parts=[...(details.parts||[])].sort(byPopularity),backPool=[],logoPool=[];
+  let collectionImages={};
+  try{collectionImages=await tm("/collection/"+collection.id+"/images",{include_image_language:"null"})}catch(e){}
+  (collectionImages.backdrops||[]).forEach(x=>backPool.push(x));
+  (collectionImages.logos||[]).forEach(x=>logoPool.push(x));
+  for(const movie of parts.slice(0,30)){
+    try{const images=await tm("/movie/"+movie.id+"/images",{include_image_language:langs()});
+      textless(images.backdrops).forEach(x=>backPool.push(x));
+      goodLogos(images.logos).forEach(x=>logoPool.push(x));
+    }catch(e){}
   }
-  if(!backs.length){
-    const ci=await tm("/collection/"+collection.id+"/images",{include_image_language:"null"});
-    backs=(ci.backdrops||[]).sort((a,b)=>(b.vote_average||0)-(a.vote_average||0));
-  }
+  const unique=a=>[...new Map(a.map(x=>[x.file_path,x])).values()];
+  const backs=unique(backPool).sort((a,b)=>(b.vote_average||0)-(a.vote_average||0)||(b.vote_count||0)-(a.vote_count||0));
+  const logos=unique(logoPool).sort((a,b)=>lp(a)-lp(b)||(b.vote_average||0)-(a.vote_average||0)||(b.vote_count||0)-(a.vote_count||0));
   return {backs,logos,parts};
 }
 async function firstBackdrop(list){for(const m of [...list].sort(byPopularity).slice(0,20)){const im=await tm("/movie/"+m.id+"/images",{include_image_language:langs()}),b=textless(im.backdrops);if(b.length)return b}return[]}
@@ -469,39 +471,54 @@ async function pickItem(x){const name=x.title||x.name,k=x.media_type;tmsg("Carre
     else{const im=await tm("/"+k+"/"+x.id+"/images",{include_image_language:langs()});T.backs=textless(im.backdrops);T.logos=goodLogos(im.logos)}
     showThumbs();tmsg(T.backs.length||T.logos.length||$("parts").children.length?"Clique num fundo ou numa logo para usar.":"Sem imagens disponíveis para esse título.")}
   catch(e){tmsg(terr(e))}}
-async function tmBest(q){const lg=L2();
-  if(o.stype==="person"){const r=rankResults((await tm("/search/person",{query:q,language:lg})).results,q)[0];if(!r)throw new Error("none");
+async function tmBest(q,opts={}){
+  const lg=L2(),stype=opts.stype||o.stype;
+  if(stype==="person"){
+    const r=rankResults((await tm("/search/person",{query:q,language:lg})).results,q)[0];if(!r)throw new Error("none");
     const profiles=((await tm("/person/"+r.id+"/images")).profiles||[]).map(p=>({...p,profile:true}));
-    const backs=profiles.length?profiles:await firstBackdrop(await personMovies(r));
-    return{name:r.name,text:r.name,backs,logos:[]}}
-  if(o.stype==="company"){const r=rankResults((await tm("/search/company",{query:q})).results,q)[0];if(!r)throw new Error("none");
-    const [backs,ci]=await Promise.all([firstBackdrop(await companyMovies(r)),tm("/company/"+r.id+"/images")]);
-    return{name:r.name,text:r.name,backs,logos:goodLogos(ci.logos)}}
-  const[a,c]=await Promise.all([tm("/search/multi",{query:q,language:lg}),tm("/search/collection",{query:q,language:lg})]);
-  const m=rankResults(a.results.filter(x=>x.media_type==="movie"||x.media_type==="tv"),q)[0];
+    return{name:r.name,text:r.name,backs:profiles,logos:[],kind:"person"};
+  }
+  if(stype==="company"){
+    const r=rankResults((await tm("/search/company",{query:q})).results,q)[0];if(!r)throw new Error("none");
+    const ci=await tm("/company/"+r.id+"/images");
+    return{name:r.name,text:r.name,backs:[],logos:goodLogos(ci.logos),kind:"company"};
+  }
+  const [multi,collections]=await Promise.all([
+    tm("/search/multi",{query:q,language:lg}),tm("/search/collection",{query:q,language:lg})
+  ]);
   const target=normSearch(q);
-  let col=rankResults(c.results,q).find(x=>{const n=normSearch(x.name);return n===target||n.startsWith(target)||n.includes(target)||target.includes(n)});
-  if(!col&&m&&m.media_type==="movie"&&(m.title||"").toLowerCase()!==q.toLowerCase()){try{const d=await tm("/movie/"+m.id,{language:lg});if(d.belongs_to_collection)col=d.belongs_to_collection}catch(e){}}
-  if(col){
-    const assets=await sagaAssets(col);
-    return{name:col.name,text:cleanSaga(col.name),backs:assets.backs,logos:assets.logos};
+  const movies=rankResults((multi.results||[]).filter(x=>x.media_type==="movie"),q);
+  const exactMovie=movies.find(x=>normSearch(x.title)===target);
+  const collectionList=rankResults(collections.results||[],q);
+  const exactCollection=collectionList.find(x=>normSearch(cleanSaga(x.name))===target);
+  if(exactMovie){
+    const details=await tm("/movie/"+exactMovie.id,{language:lg});
+    const images=await tm("/movie/"+exactMovie.id+"/images",{include_image_language:langs()});
+    return{name:details.title||exactMovie.title,text:details.title||exactMovie.title,backs:textless(images.backdrops),logos:goodLogos(images.logos),kind:"movie"};
   }
-  if(m){
-    if(m.media_type==="movie"){
-      const details=await tm("/movie/"+m.id,{language:lg});
-      if(details.belongs_to_collection){
-        const assets=await sagaAssets(details.belongs_to_collection);
-        return{name:details.belongs_to_collection.name,text:cleanSaga(details.belongs_to_collection.name),backs:assets.backs,logos:assets.logos};
-      }
+  let collection=exactCollection;
+  if(!collection&&movies[0]){
+    const details=await tm("/movie/"+movies[0].id,{language:lg});
+    if(details.belongs_to_collection){
+      const n=normSearch(cleanSaga(details.belongs_to_collection.name));
+      if(n===target||n.startsWith(target+" ")||target.startsWith(n+" "))collection=details.belongs_to_collection;
     }
-    const im=await tm("/"+m.media_type+"/"+m.id+"/images",{include_image_language:langs()});
-    return{name:m.title||m.name,text:m.title||m.name,backs:textless(im.backdrops),logos:goodLogos(im.logos)}
   }
-  throw new Error("none")}
+  if(collection){
+    const assets=await sagaAssets(collection);
+    return{name:collection.name,text:cleanSaga(collection.name),backs:assets.backs,logos:assets.logos,kind:"collection"};
+  }
+  const best=movies[0]||(multi.results||[]).filter(x=>x.media_type==="tv").sort(byPopularity)[0];
+  if(best){
+    const images=await tm("/"+best.media_type+"/"+best.id+"/images",{include_image_language:langs()});
+    return{name:best.title||best.name,text:best.title||best.name,backs:textless(images.backdrops),logos:goodLogos(images.logos),kind:best.media_type};
+  }
+  throw new Error("none");
+}
 $("tgo").onclick=tmSearch;$("tq").addEventListener("keydown",e=>{if(e.key==="Enter")tmSearch()});
 $("tauto").onclick=async()=>{const q=$("tq").value.trim();if(!q)return tmsg("Digite o nome primeiro.");tmsg("Montando...");
   try{const r=await tmBest(q);
-    if(r.backs[0]){const p=r.backs[0],b=await tmImg(p.file_path,imgSize(p));setBg(await blobImg(b),b)}
+    if(r.backs.length){const p=r.backs[Math.floor(Math.random()*r.backs.length)],b=await tmImg(p.file_path,imgSize(p));setBg(await blobImg(b),b)}
     o.img=r.logos[0]?await blobImg(await tmImg(r.logos[0].file_path,"original")):null;
     if($("autoText").checked)o.text=r.text;
     sync();render();tmsg("Pronto: {n}. Ajuste o que quiser e baixe.",{n:r.name})}
@@ -546,9 +563,9 @@ async function runBatch(names){
       if(useTm){
         try{
           const r=await tmBest(original.replace(/\s*\|\s*/g," "));
-          if((outs.includes("cover")||outs.includes("hero"))&&(!r.backs||!r.backs.length))throw new Error("no-backdrop");
+          if(r.kind==="movie"&&(outs.includes("cover")||outs.includes("hero"))&&(!r.backs||!r.backs.length))throw new Error("no-backdrop");
           if(r.backs&&r.backs.length){
-            const p=r.backs[0],blob=await tmImg(p.file_path,p.profile?"original":"w1280");
+            const p=r.backs[Math.floor(Math.random()*r.backs.length)],blob=await tmImg(p.file_path,p.profile?"original":"w1280");
             o.bg=await blobImg(blob);o.bgBlob=blob;o.cut=null;
           }
           o.img=r.logos&&r.logos[0]?await blobImg(await tmImg(r.logos[0].file_path,"original")):null;
