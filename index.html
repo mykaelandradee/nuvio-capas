@@ -87,7 +87,7 @@ input[type=color]{width:100%;height:42px;border:0;border-radius:12px;background:
 <body>
 <header class="top">
   <div class="brand"><div class="mark">✦</div><div><h1>Nuvio Studio</h1><p>Capas, logos e fundos de hero para suas coleções</p></div></div>
-  <button class="icon" id="theme" aria-label="Alternar tema claro e escuro">◐</button>
+  <div style="display:flex;gap:8px"><button class="icon" id="lang" aria-label="Idioma / Language" style="width:auto;padding:0 13px;font-weight:700">EN</button><button class="icon" id="theme" aria-label="Alternar tema claro e escuro">◐</button></div>
 </header>
 <main class="app">
 <section class="stage">
@@ -99,7 +99,7 @@ input[type=color]{width:100%;height:42px;border:0;border-radius:12px;background:
   <div class="view" id="view"><canvas id="cv" aria-label="Pré-visualização"></canvas><div class="drop">Solte a imagem aqui para usar de fundo</div></div>
   <div class="bar">
     <span class="dim" id="dim"></span><span class="msg" id="msg">Dica: arraste uma imagem para cima da prévia.</span>
-    <button class="ghost" id="copy">Copiar</button>
+    <button class="ghost" id="resetTop">Redefinir tudo</button><button class="ghost" id="copy">Copiar</button>
     <button class="primary" id="dl">Baixar</button>
   </div>
 </section>
@@ -117,20 +117,30 @@ input[type=color]{width:100%;height:42px;border:0;border-radius:12px;background:
     <input type="password" id="tkey" autocomplete="off">
     <p class="msg" id="kmsg">O token fica salvo só neste navegador e nunca é enviado a outro lugar além do TMDB. Não use em computador compartilhado.</p>
     <button class="ghost" id="forgetKey">Esquecer token</button>
-    <label for="tq">Filme, série ou saga</label>
+    <label for="stype">Buscar por</label>
+    <select id="stype" data-k="stype"><option value="title">Filme, série ou saga</option><option value="person">Ator ou diretor</option><option value="company">Estúdio</option></select>
+    <label for="tq">Nome</label>
     <div class="row"><input type="search" id="tq" placeholder="Ex.: Harry Potter"><button class="ghost" id="tgo" style="flex:0">Buscar</button></div>
+    <label for="sagaLogo">Logo para sagas e estúdios</label>
+    <select id="sagaLogo" data-k="sagaLogo"><option value="text">Genérica: nome da coleção no seu estilo</option><option value="film">Logo original do TMDB (filme/estúdio)</option></select>
     <button class="primary full" id="tauto">⚡ Montar automaticamente</button>
-    <label class="chk"><input type="checkbox" id="autoText" data-k="autoText"> Usar o nome do título como texto</label>
-    <p class="msg" id="tmsg">Cole seu token gratuito (themoviedb.org, Configurações, API) e busque um título. O automático escolhe o melhor fundo e a melhor logo.</p>
+    <label class="chk"><input type="checkbox" id="autoText" data-k="autoText"> Usar o nome encontrado como texto</label>
+    <p class="msg" id="tmsg">Cole seu token gratuito (themoviedb.org, Configurações, API) e busque. O automático escolhe o melhor fundo e a logo.</p>
     <div id="tres"></div><div id="parts"></div>
-    <label id="lb1" hidden>Fundos (clique para usar)</label><div class="thumbs" id="tback"></div>
+    <label id="lb1" hidden>Fundos e fotos (clique para usar)</label><div class="thumbs" id="tback"></div>
     <label id="lb2" hidden>Logos (clique para usar)</label><div class="thumbs lg" id="tlogo"></div>
   </div></details>
 
-  <details open><summary>Texto</summary><div class="body">
+  <details open data-reset="text,font,tc,strokeC,upper,scale,ls,lineH,stroke,shadow,ty,tmode,logoScale,lx,ly"><summary>Título: texto e logo</summary><div class="body">
     <label for="text">Nome da coleção</label>
     <textarea id="text" data-k="text">Filmes
 de Ação</textarea>
+    <label for="tmode">O que mostrar no título</label>
+    <select id="tmode" data-k="tmode"><option value="both">Logo e texto</option><option value="logo">Só a logo</option><option value="text">Só o texto</option></select>
+    <label for="file">Enviar logo ou ícone (PNG, SVG, JPG)</label><input type="file" id="file" accept="image/*">
+    <button class="ghost" id="rmLogo" style="margin-top:8px">Remover logo</button>
+    <label for="logoScale">Tamanho da logo</label><input type="range" id="logoScale" data-k="logoScale" min="40" max="200">
+    <div data-m="cover hero"><div class="row"><div><label for="lx">Logo: posição horizontal</label><input type="range" id="lx" data-k="lx" min="-50" max="50"></div><div><label for="ly">Logo: posição vertical</label><input type="range" id="ly" data-k="ly" min="-50" max="50"></div></div></div>
     <label for="font">Fonte</label><select id="font" data-k="font"></select>
     <label for="fontfile">Usar sua própria fonte (TTF, OTF, WOFF)</label><input type="file" id="fontfile" accept=".ttf,.otf,.woff,.woff2">
     <div class="row"><div><label for="tc">Cor do texto</label><input type="color" id="tc" data-k="tc"></div><div><label for="strokeC">Cor do contorno</label><input type="color" id="strokeC" data-k="strokeC"></div></div>
@@ -140,15 +150,15 @@ de Ação</textarea>
     <label for="lineH">Altura da linha</label><input type="range" id="lineH" data-k="lineH" min="70" max="140">
     <label for="stroke">Espessura do contorno</label><input type="range" id="stroke" data-k="stroke" min="0" max="15">
     <label for="shadow">Sombra</label><input type="range" id="shadow" data-k="shadow" min="0" max="100">
-    <div data-m="cover hero"><label for="ty">Posição vertical do texto</label><input type="range" id="ty" data-k="ty" min="-40" max="40"></div>
-    <label class="chk" data-m="hero"><input type="checkbox" id="heroText" data-k="heroText"> Incluir texto no fundo do hero</label>
+    <div data-m="cover hero"><label for="ty">Posição vertical do título</label><input type="range" id="ty" data-k="ty" min="-40" max="40"></div>
+    <label class="chk" data-m="hero"><input type="checkbox" id="heroText" data-k="heroText"> Incluir o título no fundo do hero</label>
   </div></details>
 
   <details open><summary>Formato</summary><div class="body">
     <div data-m="cover"><label id="fl">Proporção da capa</label>
       <div class="seg" id="fmt" role="group" aria-labelledby="fl"><button data-v="land" aria-pressed="true">Paisagem 16:9</button><button data-v="poster" aria-pressed="false">Poster 2:3</button><button data-v="square" aria-pressed="false">Quadrado</button></div>
       <label for="layout">Composição</label>
-      <select id="layout" data-k="layout"><option value="center">Centralizada</option><option value="bottom">Texto no rodapé</option><option value="band">Faixa no meio</option><option value="text">Só texto</option></select>
+      <select id="layout" data-k="layout"><option value="center">Centralizada</option><option value="bottom">Texto no rodapé</option><option value="band">Faixa no meio</option></select>
     </div>
     <div data-m="logo"><label for="logoW">Largura da logo</label>
       <select id="logoW" data-k="logoW"><option value="1200">1200 px</option><option value="1600">1600 px (recomendado)</option><option value="2400">2400 px (alta)</option></select>
@@ -158,7 +168,7 @@ de Ação</textarea>
       <label for="fade">Esmaecer laterais e base</label><input type="range" id="fade" data-k="fade" min="0" max="100"></div>
   </div></details>
 
-  <details data-m="cover hero"><summary>Fundo</summary><div class="body">
+  <details data-m="cover hero" data-reset="bz,bx,by,dark,tint,blur,bri,con,sat,gray"><summary>Fundo</summary><div class="body">
     <label for="bgfile">Enviar imagem de fundo</label><input type="file" id="bgfile" accept="image/*">
     <button class="ghost full" id="rmBg">Remover imagem de fundo</button>
     <label for="bz">Zoom</label><input type="range" id="bz" data-k="bz" min="100" max="300">
@@ -170,7 +180,7 @@ de Ação</textarea>
     <div class="row"><div><label for="sat">Saturação</label><input type="range" id="sat" data-k="sat" min="0" max="200"></div><div><label for="gray">Preto e branco</label><input type="range" id="gray" data-k="gray" min="0" max="100"></div></div>
   </div></details>
 
-  <details open data-m="cover hero"><summary>Cores e degradê</summary><div class="body">
+  <details open data-m="cover hero" data-reset="c1,c2,angle,glow,vig"><summary>Cores e degradê</summary><div class="body">
     <div class="presets" id="presets"></div><div class="presets" id="mypal" style="margin-top:8px"></div>
     <div class="row" style="margin-top:10px"><button class="ghost" id="savePal">Salvar esta paleta</button><button class="ghost" id="clrPal">Limpar salvas</button></div>
     <div class="row" style="margin-top:12px"><div><label for="c1">Cor A</label><input type="color" id="c1" data-k="c1"></div><div><label for="c2">Cor B</label><input type="color" id="c2" data-k="c2"></div></div>
@@ -186,31 +196,25 @@ de Ação</textarea>
     <p class="msg" id="cmsg"></p><button class="ghost" id="rmCut">Remover recorte</button>
   </div></details>
 
-  <details data-m="cover logo hero"><summary>Logo do título</summary><div class="body">
-    <label for="file">Enviar logo ou ícone (PNG, SVG, JPG)</label><input type="file" id="file" accept="image/*">
-    <p class="msg">Ou escolha uma logo na busca do TMDB, acima.</p>
-    <label for="logoScale">Tamanho</label><input type="range" id="logoScale" data-k="logoScale" min="40" max="200">
-    <div data-m="cover hero"><div class="row"><div><label for="lx">Posição horizontal</label><input type="range" id="lx" data-k="lx" min="-50" max="50"></div><div><label for="ly">Posição vertical</label><input type="range" id="ly" data-k="ly" min="-50" max="50"></div></div></div>
-    <label class="chk" data-m="cover logo"><input type="checkbox" id="showText" data-k="showText"> Mostrar o texto junto da logo</label>
-    <button class="ghost" id="rmLogo" style="margin-top:8px">Remover logo</button>
-  </div></details>
-
   <details><summary>Estilos salvos</summary><div class="body">
     <label for="styleName">Nome do estilo</label>
     <div class="row"><input type="text" id="styleName" maxlength="40" placeholder="Ex.: Minha saga"><button class="ghost" id="saveStyle" style="flex:0">Salvar</button></div>
     <div class="chips" id="styleList"></div>
-    <div class="row" style="margin-top:12px"><button class="ghost" id="expStyle">Exportar (.json)</button><button class="ghost" id="resetAll">Restaurar padrões</button></div>
+    <button class="ghost full" id="expStyle">Exportar (.json)</button>
     <label for="impStyle">Importar estilo (.json)</label><input type="file" id="impStyle" accept=".json,application/json">
   </div></details>
 
   <details><summary>Coleção em lote</summary><div class="body">
-    <p class="msg">Um título por linha. Use | para quebrar a linha dentro do título. Todos usam o estilo atual.</p>
+    <p class="msg">Um nome por linha. Use | para quebrar a linha dentro do nome. Todos usam o estilo atual.</p>
     <textarea id="bText" placeholder="Harry Potter&#10;Senhor dos Anéis&#10;Star Wars"></textarea>
-    <label class="chk"><input type="checkbox" id="bTmdb" checked> Buscar fundo e logo de cada título no TMDB</label>
+    <label class="chk"><input type="checkbox" id="bTmdb" checked> Buscar imagens de cada item no TMDB (usa o tipo de busca e a opção de logo acima)</label>
+    <p class="msg">Para sagas, a opção genérica usa o nome da coleção (ex.: “Harry Potter”), sem reaproveitar a logo de um filme. Para pessoas, busca retratos; para estúdios, busca logos oficiais.</p>
+    <label class="chk"><input type="checkbox" id="bAutoText" checked> Usar o nome genérico encontrado no TMDB como texto</label>
     <label class="chk"><input type="checkbox" id="bCover" checked> Gerar capa</label>
     <label class="chk"><input type="checkbox" id="bLogo" checked> Gerar logo</label>
     <label class="chk"><input type="checkbox" id="bHero"> Gerar fundo do hero</label>
     <button class="primary full" id="bGo">Gerar coleção (ZIP)</button>
+    <button class="ghost full" id="restoreDefaults">Restaurar padrões</button>
     <p class="msg" id="bmsg"></p>
   </div></details>
 
@@ -234,17 +238,29 @@ const FONTS=[["Bebas Neue",400],["Anton",400],["Oswald",700],["Bungee",400],["Ci
 const FW={};
 const SIZES={land:[1280,720],poster:[800,1200],square:[1000,1000]};
 const PRE=[["#e50914","#140506"],["#2563eb","#050b24"],["#8b5cf6","#12062b"],["#10b981","#031a12"],["#f97316","#1f0a02"],["#ec4899","#240716"],["#f5c542","#1a1403"],["#6b7488","#0b0d12"]];
-const D={text:"Filmes\nde Ação",font:"Bebas Neue",fmt:"land",layout:"center",c1:PRE[0][0],c2:PRE[0][1],tc:"#ffffff",strokeC:"#000000",angle:135,glow:35,vig:true,scale:100,upper:false,ls:0,lineH:102,stroke:0,shadow:50,ty:0,logoScale:100,lx:0,ly:0,showText:true,heroText:false,bz:100,bx:0,by:0,dark:30,tint:45,blur:0,bri:100,con:100,sat:100,gray:0,logoW:"1600",heroRes:"1920",fade:55,exp:"image/png",q:92,autoText:true};
+const D={text:"Filmes\nde Ação",font:"Bebas Neue",fmt:"land",layout:"center",c1:PRE[0][0],c2:PRE[0][1],tc:"#ffffff",strokeC:"#000000",angle:135,glow:35,vig:true,scale:100,upper:false,ls:0,lineH:102,stroke:0,shadow:50,ty:0,logoScale:100,lx:0,ly:0,tmode:"both",heroText:false,bz:100,bx:0,by:0,dark:30,tint:45,blur:0,bri:100,con:100,sat:100,gray:0,logoW:"1600",heroRes:"1920",fade:55,exp:"image/png",q:92,autoText:true,stype:"title",sagaLogo:"text"};
 const PK=Object.keys(D);
 const o={...D,img:null,bg:null,bgBlob:null,cut:null,mode:"cover"};
 const cv=document.getElementById("cv"),$=id=>document.getElementById(id);
 let tok=0,dl=null;
+let lang="pt";try{const sv=localStorage.getItem("nuvio_lang");lang=sv==="en"||sv==="pt"?sv:((navigator.language||"").toLowerCase().startsWith("pt")?"pt":"en")}catch(e){}
+const EN={"Nuvio Studio · capas, logos e hero":"Nuvio Studio · covers, logos & hero backgrounds","Capas, logos e fundos de hero para suas coleções":"Collection covers, logos and hero backgrounds","Capa da pasta":"Collection cover","Logo":"Logo","Fundo do hero":"Hero background","Solte a imagem aqui para usar de fundo":"Drop an image here to use as the background","Dica: arraste uma imagem para cima da prévia.":"Tip: drag an image onto the preview.","Redefinir tudo":"Reset all","Copiar":"Copy","Baixar":"Download","Como usar":"How to use","Escolha o que gerar: capa da pasta, logo ou fundo do hero.":"Choose what to create: collection cover, logo or hero background.","Busque um filme, série ou saga no TMDB (ou envie sua imagem).":"Search for a movie, TV show or collection on TMDB (or upload an image).","Ajuste texto, cores e fundo até ficar do seu jeito.":"Adjust the text, colors and background.","Baixe o arquivo, hospede em algum lugar com link direto (GitHub, Imgur) e cole o link no Xperience.":"Download the file, host it somewhere with a direct link (GitHub, Imgur), and paste the link into Xperience.","Buscar no TMDB":"Search TMDB","Token do TMDB (API Read Access Token)":"TMDB token (API Read Access Token)","O token fica salvo só neste navegador e nunca é enviado a outro lugar além do TMDB. Não use em computador compartilhado.":"The token is stored only in this browser and is sent only to TMDB. Do not use it on a shared computer.","Esquecer token":"Forget token","Buscar por":"Search by","Filme, série ou saga":"Movie, TV show or collection","Ator ou diretor":"Actor or director","Estúdio":"Studio","Nome":"Name","Buscar":"Search","Logo para sagas e estúdios":"Logo for collections and studios","Genérica: nome da coleção no seu estilo":"Generic: collection name in your style","Logo original do TMDB (filme/estúdio)":"Original TMDB logo (movie/studio)","Montar automaticamente":"Build automatically","Usar o nome encontrado como texto":"Use the matched name as text","Cole seu token gratuito (themoviedb.org, Configurações, API) e busque. O automático escolhe o melhor fundo e a logo.":"Paste your free token (themoviedb.org, Settings, API) and search. Automatic mode picks a suitable background and logo.","Fundos e fotos (clique para usar)":"Backgrounds and portraits (click to use)","Logos (clique para usar)":"Logos (click to use)","Título: texto e logo":"Title: text and logo","Nome da coleção":"Collection name","O que mostrar no título":"What to show in the title","Logo e texto":"Logo and text","Só a logo":"Logo only","Só o texto":"Text only","Enviar logo ou ícone (PNG, SVG, JPG)":"Upload a logo or icon (PNG, SVG, JPG)","Remover logo":"Remove logo","Tamanho da logo":"Logo size","Logo: posição horizontal":"Logo: horizontal position","Logo: posição vertical":"Logo: vertical position","Fonte":"Font","Usar sua própria fonte (TTF, OTF, WOFF)":"Use your own font (TTF, OTF, WOFF)","Cor do texto":"Text color","Cor do contorno":"Outline color","Tudo em maiúsculas":"All caps","Tamanho do texto":"Text size","Espaço entre letras":"Letter spacing","Altura da linha":"Line height","Espessura do contorno":"Outline thickness","Sombra":"Shadow","Posição vertical do título":"Title vertical position","Incluir o título no fundo do hero":"Include the title in the hero background","Formato":"Format","Proporção da capa":"Cover aspect ratio","Paisagem 16:9":"Landscape 16:9","Poster 2:3":"Poster 2:3","Quadrado":"Square","Composição":"Layout","Centralizada":"Centered","Texto no rodapé":"Text at bottom","Faixa no meio":"Middle band","Largura da logo":"Logo width","A imagem é recortada rente ao conteúdo, sem espaço vazio.":"The image is tightly cropped to its content, with no empty space.","Resolução do hero":"Hero resolution","Esmaecer laterais e base":"Fade sides and bottom","Fundo":"Background","Enviar imagem de fundo":"Upload background image","Remover imagem de fundo":"Remove background image","Zoom":"Zoom","Posição horizontal":"Horizontal position","Posição vertical":"Vertical position","Escurecer":"Darken","Cor da paleta sobre a imagem":"Palette color overlay","Desfoque":"Blur","Brilho":"Brightness","Contraste":"Contrast","Saturação":"Saturation","Preto e branco":"Black and white","Cores e degradê":"Colors and gradient","Salvar esta paleta":"Save this palette","Limpar salvas":"Clear saved palettes","Cor A":"Color A","Cor B":"Color B","Ângulo do degradê":"Gradient angle","Brilho de luz":"Glow","Vinheta nas bordas":"Vignette around edges","Profundidade":"Depth","O texto fica entre o fundo e o assunto principal da imagem. Precisa de um recorte do assunto, sem fundo.":"The text sits between the background and the main subject. A cutout of the subject with a transparent background is required.","Recortar assunto automaticamente":"Automatically remove subject background","Ou enviar o recorte (PNG transparente)":"Or upload a cutout (transparent PNG)","Remover recorte":"Remove cutout","Estilos salvos":"Saved styles","Nome do estilo":"Style name","Salvar":"Save","Exportar (.json)":"Export (.json)","Importar estilo (.json)":"Import style (.json)","Coleção em lote":"Batch collection","Um nome por linha. Use | para quebrar a linha dentro do nome. Todos usam o estilo atual.":"One name per line. Use | to insert a line break within a name. All items use the current style.","Buscar imagens de cada item no TMDB (usa o tipo de busca e a opção de logo acima)":"Search TMDB images for each item (uses the search type and logo option above)","Para sagas, a opção genérica usa o nome da coleção (ex.: “Harry Potter”), sem reaproveitar a logo de um filme. Para pessoas, busca retratos; para estúdios, busca logos oficiais.":"For collections, generic mode uses the collection name (e.g. “Harry Potter”) instead of reusing a movie logo. For people, it searches portraits; for studios, official logos.","Usar o nome genérico encontrado no TMDB como texto":"Use the generic name returned by TMDB as the text","Gerar capa":"Create cover","Gerar logo":"Create logo","Gerar fundo do hero":"Create hero background","Gerar coleção (ZIP)":"Generate collection (ZIP)","Restaurar padrões":"Restore defaults","Exportação":"Export","Formato do arquivo":"File format","PNG (melhor qualidade)":"PNG (best quality)","JPG (arquivo menor)":"JPG (smaller file)","WebP (menor ainda)":"WebP (even smaller)","Qualidade (JPG e WebP)":"Quality (JPG and WebP)","A logo sempre sai em PNG, para manter o fundo transparente.":"Logos are always exported as PNG to preserve transparency.","Baixar pacote completo (ZIP)":"Download complete package (ZIP)","Ferramenta não oficial, sem vínculo com Nuvio, Xperience ou TMDB. Suas imagens são processadas no seu navegador e nada é enviado para um servidor desta página; apenas as buscas ao TMDB saem daqui, direto para o TMDB. Sem cadastro, cookies ou rastreamento.":"Unofficial tool, not affiliated with Nuvio, Xperience or TMDB. Images are processed in your browser and are not sent to this page's server; only TMDB searches are sent directly to TMDB. No account, cookies or tracking.","Escolha uma opção:":"Choose an option:","Nenhum resultado.":"No results found.","Digite um nome para buscar.":"Enter a name to search.","Logo genérica (só o nome)":"Generic logo (name only)","Logo genérica aplicada: só o nome da saga.":"Generic logo applied: collection name only.","Ou a logo de um filme da saga:":"Or choose a logo from a movie in this collection:","Clique numa logo para usar.":"Click a logo to use it.","Esse filme não tem logo no TMDB.":"This movie has no logo on TMDB.","Carregando imagens de {n}...":"Loading images for {n}...","Carregando logos...":"Loading logos...","Clique num fundo ou numa logo para usar.":"Click a background or logo to use it.","Sem imagens disponíveis para esse título.":"No images are available for this title.","Buscando...":"Searching...","Montando...":"Building...","Pronto: {n}. Ajuste o que quiser e baixe.":"Ready: {n}. Make any adjustments and download.","Digite o nome primeiro.":"Enter a name first.","Cole seu token do TMDB primeiro.":"Paste your TMDB token first.","Token do TMDB inválido.":"Invalid TMDB token.","Nada encontrado para esse nome.":"Nothing found for that name.","Não foi possível falar com o TMDB. Verifique a conexão e o token, ou envie uma imagem.":"Could not connect to TMDB. Check your connection and token, or upload an image.","Token salvo neste navegador.":"Token saved in this browser.","Token removido.":"Token removed.","Este ambiente não permite salvar o token.":"This environment does not allow saving the token.","Fundo aplicado.":"Background applied.","Logo aplicada.":"Logo applied.","Baixando fundo...":"Downloading background...","Baixando logo...":"Downloading logo...","Não foi possível salvar. Tente de novo.":"Could not save. Try again.","Download cancelado.":"Download canceled.","Imagem copiada.":"Image copied.","O navegador não permitiu copiar. Use Baixar.":"The browser did not allow copying. Use Download.","Gerando pacote...":"Creating package...","Pronto: {n} item(ns).":"Done: {n} item(s).","Escreva um nome por linha.":"Enter one name per line.","Marque pelo menos um tipo de arquivo.":"Select at least one output type.","Não foi possível carregar o módulo de ZIP.":"Could not load the ZIP module.","Gerando {a} de {b}: {c}":"Creating {a} of {b}: {c}","Pronto: {n} item(ns). {f} sem imagens do TMDB (usou o fundo atual).":"Done: {n} item(s). {f} had no TMDB images (the current background was used).","Algo deu errado no lote. Confira o token do TMDB e tente de novo.":"Something went wrong with the batch. Check your TMDB token and try again.","Configurações e imagens restauradas para o padrão.":"Settings and images restored to defaults.","Tudo foi redefinido para o padrão.":"Everything was restored to defaults.","Redefinir esta seção":"Reset this section","Estilo aplicado: {n}":"Style applied: {n}","Apagar estilo":"Delete style","Dê um nome ao estilo.":"Enter a style name.","Estilo salvo: {n}":"Style saved: {n}","Arquivo de estilo inválido.":"Invalid style file.","Estilo importado.":"Style imported.","Paleta salva neste navegador.":"Palette saved in this browser.","Este ambiente não permite salvar.":"This environment does not allow saving.","Recorte aplicado. Ajuste a posição vertical do texto.":"Cutout applied. Adjust the text's vertical position.","Recorte removido.":"Cutout removed.","Recorte inválido.":"Invalid cutout.","Escolha ou envie uma imagem de fundo primeiro.":"Choose or upload a background image first.","Carregando o modelo de recorte. Na primeira vez pode levar alguns minutos.":"Loading the background-removal model. The first run may take a few minutes.","Não foi possível recortar automaticamente aqui. Envie o recorte em PNG transparente.":"Automatic background removal failed. Upload a transparent PNG cutout.","Imagem muito grande (máximo de 25 MB).":"Image too large (25 MB maximum).","Esse arquivo não é uma imagem.":"This file is not an image.","Não foi possível abrir essa imagem.":"Could not open this image."};
+const tr=(s,v)=>{let r=(lang==="en"&&EN[s])||s;if(v)for(const k in v)r=r.split("{"+k+"}").join(v[k]);return r};
+const TN=[],AT=[],OP=[];
+function collect(){const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,{acceptNode:n=>n.parentNode.closest("script,style,textarea,option")||!n.nodeValue.trim()?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT});let n;while(n=w.nextNode())TN.push([n,n.nodeValue]);
+  document.querySelectorAll("[placeholder],[aria-label]").forEach(e=>["placeholder","aria-label"].forEach(a=>{if(e.hasAttribute(a))AT.push([e,a,e.getAttribute(a)])}));
+  document.querySelectorAll("select:not(#font) option").forEach(op=>OP.push([op,op.textContent]))}
+function applyLang(){const en=lang==="en",f=x=>en&&EN[x]||x;document.documentElement.lang=en?"en":"pt-BR";
+  TN.forEach(([n,p])=>{n.nodeValue=p.match(/^\s*/)[0]+f(p.trim())+p.match(/\s*$/)[0]});
+  AT.forEach(([e,a,p])=>e.setAttribute(a,f(p)));OP.forEach(([op,p])=>op.textContent=f(p));
+  document.title=f("Nuvio Studio · capas, logos e hero");$("lang").textContent=en?"PT":"EN"}
 
-const msg=t=>{$("msg").textContent=t};
+const msg=(t,v)=>{$("msg").textContent=tr(t,v)};
 const wh=im=>[im.naturalWidth||im.width||512,im.naturalHeight||im.height||512];
 const fnt=s=>(FW[o.font]||400)+" "+s+'px "'+o.font+'",sans-serif';
 const slug=s=>(String(s).split("\n")[0]||"capa").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,50)||"capa";
-const lines=()=>{if(o.img&&(!o.showText||(o.mode==="hero"&&!o.heroText)))return[];let l=o.text.split("\n").map(s=>s.trim()).filter(Boolean);if(o.upper)l=l.map(s=>s.toUpperCase());return l.length?l:[" "]};
+const useImg=()=>o.img&&o.tmode!=="text"?o.img:null;
+const lines=()=>{if(useImg()&&o.tmode==="logo")return[];let l=o.text.split("\n").map(s=>s.trim()).filter(Boolean);if(o.upper)l=l.map(s=>s.toUpperCase());return l.length?l:[" "]};
 const blobImg=b=>new Promise((res,rej)=>{const u=URL.createObjectURL(b),im=new Image();im.onload=()=>{URL.revokeObjectURL(u);res(im)};im.onerror=()=>{URL.revokeObjectURL(u);rej(new Error("img"))};im.src=u});
 const filt=(withBlur,W)=>(withBlur&&o.blur>0?"blur("+o.blur*W/1280+"px) ":"")+"brightness("+o.bri+"%) contrast("+o.con+"%) saturate("+o.sat+"%) grayscale("+o.gray+"%)";
 function bgRect(im,W,H){const[iw,ih]=wh(im),s=Math.max(W/iw,H/ih)*o.bz/100,w=iw*s,h=ih*s;return[(W-w)/2+W*o.bx/100,(H-h)/2+H*o.by/100,w,h]}
@@ -262,7 +278,7 @@ function drawBlock(c,W,H,layout){
   const mw=n?Math.max(...L.map(l=>c.measureText(l).width))||1:1,maxW=W*(layout==="bottom"?.78:.8);
   const size=Math.min(maxW/mw*100,H*.24,H*.55/((n*o.lineH/100)||1))*o.scale/100,lh=size*o.lineH/100,th=n*lh;
   c.font=fnt(size);c.fillStyle=o.tc;
-  let iw=0,ih=0;const im=o.img&&layout!=="text"?o.img:null;
+  let iw=0,ih=0;const im=useImg();
   if(im){const[nw,nh]=wh(im);ih=H*(n?.28:o.mode==="hero"?.32:.5)*o.logoScale/100;iw=ih*nw/nh;const mx=W*(n?.6:.8);if(iw>mx){iw=mx;ih=iw*nh/nw}}
   const gap=size*.25,ox=W*o.lx/100,oy=H*o.ly/100,di=(x,y)=>c.drawImage(im,x+ox,y+oy,iw,ih);
   if(layout==="bottom"){const x=W*.08;if(im)di(x,H*.92-th-ih-(n?gap:0));putLines(c,L,x,H*.92-th,size,lh,"left")}
@@ -288,10 +304,10 @@ function paintHero(cvs,c){
   const W=+o.heroRes,H=W*9/16;cvs.width=W;cvs.height=H;paintBg(c,W,H,"none");
   const f=o.fade/100;let g=c.createLinearGradient(0,0,W,0);g.addColorStop(0,"rgba(0,0,0,"+f*.9+")");g.addColorStop(.7,"rgba(0,0,0,0)");c.fillStyle=g;c.fillRect(0,0,W,H);
   g=c.createLinearGradient(0,H*.5,0,H);g.addColorStop(0,"rgba(0,0,0,0)");g.addColorStop(1,"rgba(0,0,0,"+f*.95+")");c.fillStyle=g;c.fillRect(0,0,W,H);
-  if(o.heroText||o.img)txt(c,W,H,"bottom");drawCut(c,W,H);
+  if(o.heroText)txt(c,W,H,"bottom");drawCut(c,W,H);
 }
 function paintLogo(cvs,c){
-  const L=lines(),n=L.length,B=200,lh=B*o.lineH/100,im=o.img;
+  const L=lines(),n=L.length,B=200,lh=B*o.lineH/100,im=useImg();
   c.font=fnt(B);fx(c,B);const mw=n?Math.max(...L.map(x=>c.measureText(x).width))||1:1;
   let iw=0,ih=0;const gap=B*.15;
   if(im){const[nw,nh]=wh(im);ih=B*1.4*o.logoScale/100;iw=ih*nw/nh}
@@ -323,11 +339,11 @@ document.querySelectorAll("#fmt button").forEach(b=>b.onclick=()=>{o.fmt=b.datas
 document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>{o.mode=b.dataset.mode;document.querySelectorAll("#tabs button").forEach(x=>x.setAttribute("aria-pressed",x===b));applyMode();render()});
 $("theme").onclick=()=>{const r=document.documentElement,cur=r.dataset.theme||(matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light");r.dataset.theme=cur==="dark"?"light":"dark"};
 document.querySelectorAll(".msg[id]").forEach(e=>e.setAttribute("aria-live","polite"));
-PRE.forEach(([a,b])=>{const e=document.createElement("button");e.style.background="linear-gradient(135deg,"+a+","+b+")";e.setAttribute("aria-label","Paleta "+a);e.onclick=()=>{o.c1=a;o.c2=b;sync();render()};$("presets").appendChild(e)});
+PRE.forEach(([a,b])=>{const e=document.createElement("button");e.style.background="linear-gradient(135deg,"+a+","+b+")";e.setAttribute("aria-label",tr("Paleta")+" "+a);e.onclick=()=>{o.c1=a;o.c2=b;sync();render()};$("presets").appendChild(e)});
 
 /* imagens */
 const loadFile=(f,cb)=>{if(!f||!f.type.startsWith("image/"))return msg("Esse arquivo não é uma imagem.");if(f.size>25*1024*1024)return msg("Imagem muito grande (máximo de 25 MB).");blobImg(f).then(cb).catch(()=>msg("Não foi possível abrir essa imagem."))};
-const cmsg=t=>{$("cmsg").textContent=t};
+const cmsg=(t,v)=>{$("cmsg").textContent=tr(t,v)};
 function setBg(im,blob){o.bg=im;o.bgBlob=blob||null;o.cut=null;o.bz=100;o.bx=0;o.by=0;cmsg("");sync();render()}
 $("file").onchange=e=>loadFile(e.target.files[0],im=>{o.img=im;render()});
 $("rmLogo").onclick=()=>{o.img=null;$("file").value="";render()};
@@ -340,73 +356,99 @@ $("autoCut").onclick=async()=>{
   if(!o.bgBlob)return cmsg("Escolha ou envie uma imagem de fundo primeiro.");
   cmsg("Carregando o modelo de recorte. Na primeira vez pode levar alguns minutos.");
   try{const m=await import("https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.5/+esm");
-    setCut(await m.removeBackground(o.bgBlob,{progress:(k,c,t)=>{if(t)cmsg("Baixando modelo: "+Math.round(c/t*100)+"%")}}))}
+    setCut(await m.removeBackground(o.bgBlob,{progress:(k,c,t)=>{if(t)cmsg("Baixando modelo: {p}%",{p:Math.round(c/t*100)})}}))}
   catch(e){cmsg("Não foi possível recortar automaticamente aqui. Envie o recorte em PNG transparente.")}};
 const vw=$("view");
 ["dragenter","dragover"].forEach(ev=>vw.addEventListener(ev,e=>{e.preventDefault();if(o.mode!=="logo")vw.classList.add("over")}));
 ["dragleave","drop"].forEach(ev=>vw.addEventListener(ev,e=>{e.preventDefault();vw.classList.remove("over")}));
 vw.addEventListener("drop",e=>{if(o.mode==="logo")return;const f=e.dataTransfer.files[0];loadFile(f,im=>{setBg(im,f);msg("Fundo aplicado.")})});
 $("fontfile").onchange=async e=>{const f=e.target.files[0];if(!f)return;
-  try{const n=f.name.replace(/\.[^.]+$/,"").replace(/[^\w -]/g,"").slice(0,40)||"Minha fonte",ff=new FontFace(n,await f.arrayBuffer());await ff.load();document.fonts.add(ff);FW[n]=400;addFont(n);o.font=n;sync();render();msg("Fonte carregada: "+n+" (vale só nesta visita).")}
+  try{const n=f.name.replace(/\.[^.]+$/,"").replace(/[^\w -]/g,"").slice(0,40)||"Minha fonte",ff=new FontFace(n,await f.arrayBuffer());await ff.load();document.fonts.add(ff);FW[n]=400;addFont(n);o.font=n;sync();render();msg("Fonte carregada: {n} (vale só nesta visita).",{n:n})}
   catch(err){msg("Não foi possível carregar essa fonte.")}};
 
 /* TMDB */
-const TM="https://api.themoviedb.org/3",tmsg=t=>{$("tmsg").textContent=t},T={backs:[],logos:[]};
+const TM="https://api.themoviedb.org/3",tmsg=(t,v)=>{$("tmsg").textContent=tr(t,v)},T={backs:[],logos:[],keep:[],kb:[]};
+const L2=()=>lang==="en"?"en-US":"pt-BR",langs=()=>lang==="en"?"en,pt,null":"pt,en,null";
 try{$("tkey").value=localStorage.getItem("tmdbkey")||""}catch(e){}
 async function tm(path,params){const k=$("tkey").value.trim();if(!k)throw new Error("key");
   const u=new URL(TM+path);Object.entries(params||{}).forEach(([a,b])=>u.searchParams.set(a,b));
   const h={};if(k.startsWith("eyJ"))h.Authorization="Bearer "+k;else u.searchParams.set("api_key",k);
   const r=await fetch(u,{headers:h});if(!r.ok)throw new Error("http"+r.status);return r.json()}
 const terr=e=>e.message==="key"?"Cole seu token do TMDB primeiro.":e.message==="http401"?"Token do TMDB inválido.":e.message==="none"?"Nada encontrado para esse nome.":"Não foi possível falar com o TMDB. Verifique a conexão e o token, ou envie uma imagem.";
-$("tkey").addEventListener("input",()=>{try{localStorage.setItem("tmdbkey",$("tkey").value.trim());$("kmsg").textContent="Token salvo neste navegador."}catch(e){$("kmsg").textContent="Este ambiente não permite salvar o token."}});
-$("forgetKey").onclick=()=>{$("tkey").value="";try{localStorage.removeItem("tmdbkey")}catch(e){}$("kmsg").textContent="Token removido."};
+$("tkey").addEventListener("input",()=>{try{localStorage.setItem("tmdbkey",$("tkey").value.trim());$("kmsg").textContent=tr("Token salvo neste navegador.")}catch(e){$("kmsg").textContent=tr("Este ambiente não permite salvar o token.")}});
+$("forgetKey").onclick=()=>{$("tkey").value="";try{localStorage.removeItem("tmdbkey")}catch(e){}$("kmsg").textContent=tr("Token removido.")};
 const byDate=(a,b)=>(a.release_date||"").localeCompare(b.release_date||"");
-const lang=l=>l.iso_639_1==="pt"?0:l.iso_639_1==="en"?1:2;
-const goodLogos=l=>(l||[]).filter(x=>!x.file_path.endsWith(".svg")).sort((a,b)=>lang(a)-lang(b));
+const lp=l=>{const a=lang==="en"?"en":"pt",b=lang==="en"?"pt":"en";return l.iso_639_1===a?0:l.iso_639_1===b?1:2};
+const goodLogos=l=>(l||[]).filter(x=>!x.file_path.endsWith(".svg")).sort((a,b)=>lp(a)-lp(b));
 const textless=b=>(b||[]).filter(x=>!x.iso_639_1);
-const mkBtn=(t,fn,box)=>{const b=document.createElement("button");b.className="ghost";b.style.margin="0 6px 6px 0";b.textContent=t;b.onclick=fn;box.appendChild(b)};
-const thumb=(fp,alt,fn)=>{const b=document.createElement("button"),i=document.createElement("img");i.src="https://image.tmdb.org/t/p/w300"+fp;i.alt=alt;i.loading="lazy";b.appendChild(i);b.onclick=fn;return b};
+const cleanSaga=n=>String(n||"").replace(/\s*[\(\[]?\s*[-–:]?\s*(coleção|colecao|collection|saga|trilogia|trilogy|film collection|movie collection)\s*[\)\]]?\s*$/i,"").replace(/^\s*(coleção|collection|saga)\s*[-–:]?\s*/i,"").replace(/\s+/g," ").trim()||n;
+const mkBtn=(t,fn,box)=>{const b=document.createElement("button");b.className="ghost";b.style.margin="0 6px 6px 0";b.textContent=tr(t);b.onclick=fn;box.appendChild(b)};
+const mkLabel=(t,box)=>{const l=document.createElement("label");l.textContent=t;box.appendChild(l)};
+const thumb=(fp,alt,fn)=>{const b=document.createElement("button"),i=document.createElement("img");i.src="https://image.tmdb.org/t/p/w300"+fp;i.alt=tr(alt);i.loading="lazy";b.appendChild(i);b.onclick=fn;return b};
 const tmImg=async(fp,size)=>{const r=await fetch("https://image.tmdb.org/t/p/"+size+fp);if(!r.ok)throw new Error("img");return r.blob()};
+const imgSize=p=>p&&p.profile?"original":o.mode==="hero"?"original":"w1280";
 function showThumbs(){const bk=$("tback"),lg=$("tlogo");bk.innerHTML="";lg.innerHTML="";
-  T.backs.slice(0,12).forEach(p=>bk.appendChild(thumb(p.file_path,"Fundo",()=>applyBack(p.file_path))));
+  T.backs.slice(0,12).forEach(p=>bk.appendChild(thumb(p.file_path,"Fundo",()=>applyBack(p))));
   T.logos.slice(0,12).forEach(p=>lg.appendChild(thumb(p.file_path,"Logo",()=>applyLogo(p.file_path))));
   $("lb1").hidden=!T.backs.length;$("lb2").hidden=!T.logos.length}
-async function applyBack(fp){tmsg("Baixando fundo...");try{const b=await tmImg(fp,o.mode==="hero"?"original":"w1280");setBg(await blobImg(b),b);tmsg("Fundo aplicado.")}catch(e){tmsg(terr(e))}}
+async function applyBack(p){tmsg("Baixando fundo...");try{const b=await tmImg(p.file_path,imgSize(p));setBg(await blobImg(b),b);tmsg("Fundo aplicado.")}catch(e){tmsg(terr(e))}}
 async function applyLogo(fp){tmsg("Baixando logo...");try{o.img=await blobImg(await tmImg(fp,"original"));render();tmsg("Logo aplicada.")}catch(e){tmsg(terr(e))}}
+async function personMovies(r){const d=await tm("/person/"+r.id+"/movie_credits",{language:L2()});let a=r.known_for_department==="Directing"?(d.crew||[]).filter(x=>x.job==="Director"):(d.cast||[]);if(!a.length)a=[...(d.cast||[]),...(d.crew||[])];const seen=new Set();return a.filter(x=>!seen.has(x.id)&&seen.add(x.id)).sort((x,y)=>(y.popularity||0)-(x.popularity||0)).slice(0,12)}
+async function companyMovies(r){return(await tm("/discover/movie",{with_companies:r.id,sort_by:"popularity.desc",language:L2()})).results.slice(0,12)}
+async function firstBackdrop(list){for(const m of list.slice(0,4)){const im=await tm("/movie/"+m.id+"/images",{include_image_language:langs()}),b=textless(im.backdrops);if(b.length)return b}return[]}
+function movieBtns(arr,name){const box=$("parts");mkLabel(tr("Filmes de {n}:",{n:name}),box);
+  arr.forEach(m=>mkBtn(m.title||m.name,async()=>{tmsg("Carregando imagens de {n}...",{n:m.title||m.name});
+    try{const im=await tm("/movie/"+m.id+"/images",{include_image_language:langs()});T.backs=[...T.kb,...textless(im.backdrops)];T.logos=[...T.keep,...goodLogos(im.logos)];showThumbs();tmsg("Clique num fundo ou numa logo para usar.")}catch(e){tmsg(terr(e))}},box))}
 async function tmSearch(){const q=$("tq").value.trim();if(!q)return tmsg("Digite um nome para buscar.");
   tmsg("Buscando...");["tres","parts","tback","tlogo"].forEach(i=>$(i).innerHTML="");$("lb1").hidden=$("lb2").hidden=true;
-  try{const[a,c]=await Promise.all([tm("/search/multi",{query:q,language:"pt-BR"}),tm("/search/collection",{query:q,language:"pt-BR"})]);
-    const items=[...c.results.slice(0,4).map(x=>({...x,media_type:"collection"})),...a.results.filter(x=>x.media_type==="movie"||x.media_type==="tv").slice(0,6)];
+  try{let items=[];
+    if(o.stype==="person")items=(await tm("/search/person",{query:q,language:L2()})).results.slice(0,8).map(x=>({...x,media_type:"person",hint:(x.known_for&&x.known_for[0]&&(x.known_for[0].title||x.known_for[0].name))||""}));
+    else if(o.stype==="company")items=(await tm("/search/company",{query:q})).results.slice(0,8).map(x=>({...x,media_type:"company"}));
+    else{const[a,c]=await Promise.all([tm("/search/multi",{query:q,language:L2()}),tm("/search/collection",{query:q,language:L2()})]);
+      items=[...c.results.slice(0,4).map(x=>({...x,media_type:"collection"})),...a.results.filter(x=>x.media_type==="movie"||x.media_type==="tv").slice(0,6)]}
     if(!items.length)return tmsg("Nenhum resultado.");
-    tmsg("Escolha o título ou a saga:");
-    items.forEach(x=>{const yr=(x.release_date||x.first_air_date||"").slice(0,4);mkBtn((x.media_type==="collection"?"Saga: ":"")+(x.title||x.name)+(yr?" ("+yr+")":""),()=>pickItem(x),$("tres"))})
+    tmsg("Escolha uma opção:");
+    items.forEach(x=>{const yr=(x.release_date||x.first_air_date||"").slice(0,4);mkBtn((x.media_type==="collection"?tr("Saga")+": ":"")+(x.title||x.name)+(yr?" ("+yr+")":"")+(x.hint?" · "+x.hint:""),()=>pickItem(x),$("tres"))})
   }catch(e){tmsg(terr(e))}}
-async function pickItem(x){const name=x.title||x.name;tmsg("Carregando imagens de "+name+"...");$("parts").innerHTML="";
-  if($("autoText").checked){o.text=name;sync();render()}
-  try{if(x.media_type==="collection"){
-      const[d,im]=await Promise.all([tm("/collection/"+x.id,{language:"pt-BR"}),tm("/collection/"+x.id+"/images",{include_image_language:"null"})]);
+async function pickItem(x){const name=x.title||x.name,k=x.media_type;tmsg("Carregando imagens de {n}...",{n:name});$("parts").innerHTML="";T.keep=[];T.kb=[];
+  if($("autoText").checked){o.text=k==="collection"?cleanSaga(name):name;sync();render()}
+  try{
+    if(k==="collection"){const[d,im]=await Promise.all([tm("/collection/"+x.id,{language:L2()}),tm("/collection/"+x.id+"/images",{include_image_language:"null"})]);
       T.backs=im.backdrops||[];T.logos=[];
-      const lb=document.createElement("label");lb.textContent="Logo de qual filme da saga?";$("parts").appendChild(lb);
-      (d.parts||[]).sort(byDate).forEach(p=>mkBtn(p.title,async()=>{tmsg("Carregando logos...");try{const li=await tm("/movie/"+p.id+"/images",{include_image_language:"pt,en,null"});T.logos=goodLogos(li.logos);showThumbs();tmsg(T.logos.length?"Clique numa logo para usar.":"Esse filme não tem logo no TMDB.")}catch(e){tmsg(terr(e))}},$("parts")))}
-    else{const im=await tm("/"+x.media_type+"/"+x.id+"/images",{include_image_language:"pt,en,null"});T.backs=textless(im.backdrops);T.logos=goodLogos(im.logos)}
-    showThumbs();tmsg(T.backs.length||T.logos.length?"Clique num fundo ou numa logo para usar.":"Sem imagens disponíveis para esse título.")}
+      mkBtn("Logo genérica (só o nome)",()=>{o.img=null;o.text=cleanSaga(name);sync();render();tmsg("Logo genérica aplicada: só o nome da saga.")},$("parts"));
+      mkLabel(tr("Ou a logo de um filme da saga:"),$("parts"));
+      (d.parts||[]).sort(byDate).forEach(p=>mkBtn(p.title,async()=>{tmsg("Carregando logos...");try{const li=await tm("/movie/"+p.id+"/images",{include_image_language:langs()});T.logos=goodLogos(li.logos);showThumbs();tmsg(T.logos.length?"Clique numa logo para usar.":"Esse filme não tem logo no TMDB.")}catch(e){tmsg(terr(e))}},$("parts")))}
+    else if(k==="person"){const[pi,mv]=await Promise.all([tm("/person/"+x.id+"/images"),personMovies(x)]);T.kb=(pi.profiles||[]).map(p=>({...p,profile:true}));T.backs=T.kb;T.logos=[];movieBtns(mv,name)}
+    else if(k==="company"){const[ci,mv]=await Promise.all([tm("/company/"+x.id+"/images"),companyMovies(x)]);T.keep=goodLogos(ci.logos);T.backs=[];T.logos=T.keep;movieBtns(mv,name)}
+    else{const im=await tm("/"+k+"/"+x.id+"/images",{include_image_language:langs()});T.backs=textless(im.backdrops);T.logos=goodLogos(im.logos)}
+    showThumbs();tmsg(T.backs.length||T.logos.length||$("parts").children.length?"Clique num fundo ou numa logo para usar.":"Sem imagens disponíveis para esse título.")}
   catch(e){tmsg(terr(e))}}
-async function tmBest(q){
-  const[a,c]=await Promise.all([tm("/search/multi",{query:q,language:"pt-BR"}),tm("/search/collection",{query:q,language:"pt-BR"})]);
-  const m=a.results.find(x=>x.media_type==="movie"||x.media_type==="tv"),col=c.results.find(x=>(x.name||"").toLowerCase().includes(q.toLowerCase()));
-  let name=q,backs=[],logos=[];
-  if(col){name=col.name;const[d,im]=await Promise.all([tm("/collection/"+col.id,{language:"pt-BR"}),tm("/collection/"+col.id+"/images",{include_image_language:"null"})]);backs=im.backdrops||[];
-    const p=(d.parts||[]).sort(byDate)[0];if(p)logos=goodLogos((await tm("/movie/"+p.id+"/images",{include_image_language:"pt,en,null"})).logos)}
-  else if(m){name=m.title||m.name;const im=await tm("/"+m.media_type+"/"+m.id+"/images",{include_image_language:"pt,en,null"});backs=textless(im.backdrops);logos=goodLogos(im.logos)}
-  else throw new Error("none");
-  return{name,backs,logos}}
+async function tmBest(q){const lg=L2(),film=o.sagaLogo==="film";
+  if(o.stype==="person"){const r=(await tm("/search/person",{query:q,language:lg})).results[0];if(!r)throw new Error("none");
+    const profiles=((await tm("/person/"+r.id+"/images")).profiles||[]).map(p=>({...p,profile:true}));
+    const backs=profiles.length?profiles:await firstBackdrop(await personMovies(r));
+    return{name:r.name,text:r.name,backs,logos:[]}}
+  if(o.stype==="company"){const r=(await tm("/search/company",{query:q})).results[0];if(!r)throw new Error("none");
+    const backs=await firstBackdrop(await companyMovies(r));
+    return{name:r.name,text:r.name,backs,logos:film?goodLogos((await tm("/company/"+r.id+"/images")).logos):[]}}
+  const[a,c]=await Promise.all([tm("/search/multi",{query:q,language:lg}),tm("/search/collection",{query:q,language:lg})]);
+  const m=a.results.find(x=>x.media_type==="movie"||x.media_type==="tv");
+  let col=c.results.find(x=>(x.name||"").toLowerCase().includes(q.toLowerCase()));
+  if(!col&&m&&m.media_type==="movie"&&(m.title||"").toLowerCase()!==q.toLowerCase()){try{const d=await tm("/movie/"+m.id,{language:lg});if(d.belongs_to_collection)col=d.belongs_to_collection}catch(e){}}
+  if(col){const[d,im]=await Promise.all([tm("/collection/"+col.id,{language:lg}),tm("/collection/"+col.id+"/images",{include_image_language:"null"})]);
+    const ps=(d.parts||[]).sort(byDate);let backs=im.backdrops||[],logos=[];
+    if(!backs.length&&ps.length)backs=await firstBackdrop(ps);
+    if(film&&ps[0])logos=goodLogos((await tm("/movie/"+ps[0].id+"/images",{include_image_language:langs()})).logos);
+    return{name:col.name,text:cleanSaga(col.name),backs,logos}}
+  if(m){const im=await tm("/"+m.media_type+"/"+m.id+"/images",{include_image_language:langs()});return{name:m.title||m.name,text:m.title||m.name,backs:textless(im.backdrops),logos:goodLogos(im.logos)}}
+  throw new Error("none")}
 $("tgo").onclick=tmSearch;$("tq").addEventListener("keydown",e=>{if(e.key==="Enter")tmSearch()});
-$("tauto").onclick=async()=>{const q=$("tq").value.trim();if(!q)return tmsg("Digite o nome do título primeiro.");tmsg("Montando...");
+$("tauto").onclick=async()=>{const q=$("tq").value.trim();if(!q)return tmsg("Digite o nome primeiro.");tmsg("Montando...");
   try{const r=await tmBest(q);
-    if(r.backs[0]){const b=await tmImg(r.backs[0].file_path,o.mode==="hero"?"original":"w1280");setBg(await blobImg(b),b)}
-    if(r.logos[0])o.img=await blobImg(await tmImg(r.logos[0].file_path,"original"));
-    if($("autoText").checked)o.text=r.name;
-    sync();render();tmsg("Pronto: "+r.name+". Ajuste o que quiser e baixe.")}
+    if(r.backs[0]){const p=r.backs[0],b=await tmImg(p.file_path,imgSize(p));setBg(await blobImg(b),b)}
+    o.img=r.logos[0]?await blobImg(await tmImg(r.logos[0].file_path,"original")):null;
+    if($("autoText").checked)o.text=r.text;
+    sync();render();tmsg("Pronto: {n}. Ajuste o que quiser e baixe.",{n:r.name})}
   catch(e){tmsg(terr(e))}};
 
 /* exportar */
@@ -414,8 +456,8 @@ const EXT={"image/png":".png","image/jpeg":".jpg","image/webp":".webp"};
 const ext=m=>m==="logo"?".png":(EXT[o.exp]||".png");
 const canvasBlob=(cs,m)=>new Promise(r=>cs.toBlob(r,m==="logo"?"image/png":o.exp,o.q/100));
 async function saveBlob(b,name){
-  if(dl){try{await dl.save({filename:name,data:b});msg("Pronto: "+name)}catch(e){msg(e&&e.code==="declined"?"Download cancelado.":"Não foi possível salvar. Tente de novo.")}return}
-  const u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);msg("Pronto: "+name)}
+  if(dl){try{await dl.save({filename:name,data:b});msg("Pronto: {n}",{n:name})}catch(e){msg(e&&e.code==="declined"?"Download cancelado.":"Não foi possível salvar. Tente de novo.")}return}
+  const u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);msg("Pronto: {n}",{n:name})}
 (async()=>{try{if(typeof claude!=="undefined")dl=await claude.use("downloads")}catch(e){}})();
 $("dl").onclick=async()=>{const b=await canvasBlob(cv,o.mode);if(!b)return msg("Não foi possível gerar a imagem.");
   await saveBlob(b,slug(o.text)+(o.mode==="logo"?"-logo":o.mode==="hero"?"-hero":"-capa-"+o.fmt)+ext(o.mode))};
@@ -427,26 +469,27 @@ $("zipBtn").onclick=async()=>{if(typeof JSZip==="undefined")return msg("Não foi
   await saveBlob(await z.generateAsync({type:"blob"}),s+"-nuvio.zip")};
 
 /* lote */
-const bmsg=t=>{$("bmsg").textContent=t};
+const bmsg=(t,v)=>{$("bmsg").textContent=tr(t,v)};
 $("bGo").onclick=async()=>{
   const names=$("bText").value.split("\n").map(s=>s.trim()).filter(Boolean).slice(0,40);
-  if(!names.length)return bmsg("Escreva um título por linha.");
+  if(!names.length)return bmsg("Escreva um nome por linha.");
   const outs=[["cover",$("bCover").checked],["logo",$("bLogo").checked],["hero",$("bHero").checked]].filter(x=>x[1]).map(x=>x[0]);
   if(!outs.length)return bmsg("Marque pelo menos um tipo de arquivo.");
   if(typeof JSZip==="undefined")return bmsg("Não foi possível carregar o módulo de ZIP.");
   const keep={text:o.text,bg:o.bg,bgBlob:o.bgBlob,cut:o.cut,img:o.img},z=new JSZip(),useTm=$("bTmdb").checked;let fails=0;
   $("bGo").disabled=true;
   try{for(let i=0;i<names.length;i++){
-      const raw=names[i].replace(/\s*\|\s*/g,"\n");bmsg("Gerando "+(i+1)+" de "+names.length+": "+names[i]);
-      o.text=raw;o.bg=keep.bg;o.bgBlob=keep.bgBlob;o.img=keep.img;o.cut=useTm?null:keep.cut;
+      const raw=names[i].replace(/\s*\|\s*/g,"\n");bmsg("Gerando {a} de {b}: {c}",{a:i+1,b:names.length,c:names[i]});
+      o.text=raw;o.bg=keep.bg;o.bgBlob=keep.bgBlob;o.img=useTm?null:keep.img;o.cut=useTm?null:keep.cut;
       if(useTm){try{const r=await tmBest(names[i].replace(/\s*\|\s*/g," "));
-          if(r.backs[0])o.bg=await blobImg(await tmImg(r.backs[0].file_path,"w1280"));
+          if(r.backs[0]){const p=r.backs[0];const blob=await tmImg(p.file_path,p.profile?"original":"w1280");o.bg=await blobImg(blob);o.bgBlob=blob}
           if(r.logos[0])o.img=await blobImg(await tmImg(r.logos[0].file_path,"original"));
-          if($("autoText").checked&&!/\n/.test(raw))o.text=r.name}catch(e){fails++}}
+          if($("bAutoText").checked)o.text=String(r.text||r.name||raw).replace(/\s*\|\s*/g,"\n");
+        }catch(e){fails++}}
       try{await document.fonts.load(fnt(100),o.text)}catch(e){}
       for(const m of outs)await addToZip(z,String(i+1).padStart(2,"0")+"-"+slug(raw)+"-"+(m==="cover"?"capa":m),m,o.fmt)}
     await saveBlob(await z.generateAsync({type:"blob"}),"colecao-nuvio.zip");
-    bmsg("Pronto: "+names.length+" título(s)."+(fails?" "+fails+" sem imagens do TMDB (usou o fundo atual).":""))}
+    bmsg(fails?"Pronto: {n} item(ns). {f} sem imagens do TMDB (usou o fundo atual).":"Pronto: {n} item(ns).",{n:names.length,f:fails})}
   catch(e){bmsg("Algo deu errado no lote. Confira o token do TMDB e tente de novo.")}
   finally{Object.assign(o,keep);$("bGo").disabled=false;sync();render()}};
 
@@ -464,21 +507,38 @@ function save(){try{localStorage.setItem("nuvio_cfg",JSON.stringify(cfgNow()))}c
 try{applyCfg(JSON.parse(localStorage.getItem("nuvio_cfg")||"null"))}catch(e){}
 const hx=/^#[0-9a-f]{6}$/i;
 let mine=[];try{const m=JSON.parse(localStorage.getItem("nuvio_pal")||"[]");mine=(Array.isArray(m)?m:[]).filter(p=>Array.isArray(p)&&hx.test(p[0])&&hx.test(p[1])).slice(-16)}catch(e){}
-function drawPal(){const g=$("mypal");g.innerHTML="";mine.forEach(([a,b],i)=>{const e=document.createElement("button");e.style.background="linear-gradient(135deg,"+a+","+b+")";e.setAttribute("aria-label","Paleta salva "+(i+1));e.onclick=()=>{o.c1=a;o.c2=b;sync();render()};g.appendChild(e)})}
+function drawPal(){const g=$("mypal");g.innerHTML="";mine.forEach(([a,b],i)=>{const e=document.createElement("button");e.style.background="linear-gradient(135deg,"+a+","+b+")";e.setAttribute("aria-label",tr("Paleta salva")+" "+(i+1));e.onclick=()=>{o.c1=a;o.c2=b;sync();render()};g.appendChild(e)})}
 $("savePal").onclick=()=>{if(!mine.some(p=>p[0]===o.c1&&p[1]===o.c2))mine.push([o.c1,o.c2]);mine=mine.slice(-16);try{localStorage.setItem("nuvio_pal",JSON.stringify(mine));msg("Paleta salva neste navegador.")}catch(e){msg("Este ambiente não permite salvar.")}drawPal()};
 $("clrPal").onclick=()=>{mine=[];try{localStorage.removeItem("nuvio_pal")}catch(e){}drawPal()};
 let styles={};try{const s=JSON.parse(localStorage.getItem("nuvio_styles")||"{}");if(s&&typeof s==="object"&&!Array.isArray(s))styles=s}catch(e){}
 function drawStyles(){const g=$("styleList");g.innerHTML="";Object.keys(styles).forEach(n=>{
-  mkBtn(n,()=>{applyCfg(styles[n]);sync();render();msg("Estilo aplicado: "+n)},g);
-  const x=document.createElement("button");x.className="ghost";x.style.margin="0 6px 6px -4px";x.textContent="×";x.setAttribute("aria-label","Apagar estilo "+n);
+  mkBtn(n,()=>{applyCfg(styles[n]);sync();render();msg("Estilo aplicado: {n}",{n:n})},g);
+  const x=document.createElement("button");x.className="ghost";x.style.margin="0 6px 6px -4px";x.textContent="×";x.setAttribute("aria-label",tr("Apagar estilo")+" "+n);
   x.onclick=()=>{delete styles[n];try{localStorage.setItem("nuvio_styles",JSON.stringify(styles))}catch(e){}drawStyles()};g.appendChild(x)})}
 $("saveStyle").onclick=()=>{const n=$("styleName").value.trim().slice(0,40);if(!n)return msg("Dê um nome ao estilo.");
   const s=cfgNow();delete s.text;styles[n]=s;
-  try{localStorage.setItem("nuvio_styles",JSON.stringify(styles));msg("Estilo salvo: "+n)}catch(e){msg("Este ambiente não permite salvar.")}drawStyles()};
+  try{localStorage.setItem("nuvio_styles",JSON.stringify(styles));msg("Estilo salvo: {n}",{n:n})}catch(e){msg("Este ambiente não permite salvar.")}drawStyles()};
 $("expStyle").onclick=()=>saveBlob(new Blob([JSON.stringify(cfgNow(),null,2)],{type:"application/json"}),"nuvio-estilo.json");
 $("impStyle").onchange=async e=>{const f=e.target.files[0];if(!f)return;try{if(f.size>100000)throw 1;applyCfg(JSON.parse(await f.text()));sync();render();msg("Estilo importado.")}catch(err){msg("Arquivo de estilo inválido.")}};
-$("resetAll").onclick=()=>{PK.forEach(k=>o[k]=D[k]);sync();render();msg("Padrões restaurados.")};
-drawPal();drawStyles();sync();applyMode();render();
+function restoreDefaults(){
+  PK.forEach(k=>o[k]=D[k]);
+  o.img=o.bg=o.bgBlob=o.cut=null;
+  ["file","bgfile","cutfile"].forEach(i=>$(i).value="");
+  T.backs=[];T.logos=[];T.keep=[];T.kb=[];
+  ["tres","parts","tback","tlogo"].forEach(i=>$(i).innerHTML="");
+  $("lb1").hidden=$("lb2").hidden=true;
+  $("bText").value="";
+  $("bTmdb").checked=true;$("bAutoText").checked=true;
+  $("bCover").checked=true;$("bLogo").checked=true;$("bHero").checked=false;
+  try{localStorage.removeItem("nuvio_cfg")}catch(e){}
+  cmsg("");sync();render();bmsg("Configurações e imagens restauradas para o padrão.");
+  msg("Tudo foi redefinido para o padrão.");
+}
+$("resetTop").onclick=()=>{if(window.confirm("Restaurar todas as configurações e remover as imagens atuais?"))restoreDefaults()};
+$("restoreDefaults").onclick=()=>{if(window.confirm("Restaurar configurações, opções do lote e remover as imagens atuais?"))restoreDefaults()};
+document.querySelectorAll("details[data-reset]").forEach(d=>{const b=document.createElement("button");b.className="ghost full";b.textContent="Redefinir esta seção";b.onclick=()=>{d.dataset.reset.split(",").forEach(k=>o[k]=D[k]);sync();render();msg("Seção redefinida.")};d.querySelector(".body").appendChild(b)});
+$("lang").onclick=()=>{lang=lang==="pt"?"en":"pt";try{localStorage.setItem("nuvio_lang",lang)}catch(e){}applyLang()};
+drawPal();drawStyles();sync();applyMode();collect();applyLang();render();
 </script>
 </body>
 </html>
