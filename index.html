@@ -78,6 +78,8 @@ input[type=color]{width:100%;height:42px;border:0;border-radius:12px;background:
 [hidden]{display:none!important}
 .foot{max-width:1320px;margin:0 auto;padding:0 22px 28px;color:var(--muted);font-size:12.5px;line-height:1.6}
 .foot a{color:inherit}
+.thumbs.lg button{background:#1b1f2a;padding:8px}
+.thumbs.lg img{height:64px;object-fit:contain}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 </style>
 </head>
@@ -165,7 +167,12 @@ de Ação</textarea>
     <button class="ghost" id="rmCut">Remover recorte</button>
   </div></details>
 
-  <details data-m="cover logo"><summary>Ícone ou logo própria</summary><div class="body">
+  <details data-m="cover logo hero"><summary>Logo do título</summary><div class="body">
+    <label for="lq">Buscar logo no TMDB (filme, série ou saga)</label>
+    <div class="row"><input type="search" id="lq" placeholder="Ex.: Harry Potter"><button class="ghost" id="lgo" style="flex:0">Buscar</button></div>
+    <p class="msg" id="lmsg">Precisa do token do TMDB (na seção Fundo com imagem). Em sagas, você escolhe de qual filme pegar a logo.</p>
+    <div id="lres"></div><div class="thumbs lg" id="lthumbs"></div>
+    <label class="chk" data-m="cover logo"><input type="checkbox" id="showText" data-k="showText"> Mostrar o texto junto da logo</label>
     <label for="file">Enviar imagem (PNG, SVG, JPG)</label><input type="file" id="file" accept="image/*">
     <label for="logoScale">Tamanho</label><input type="range" id="logoScale" data-k="logoScale" min="40" max="200">
     <button class="ghost" id="rmLogo">Remover</button>
@@ -181,22 +188,22 @@ de Ação</textarea>
 const FW={"Bebas Neue":400,"Anton":400,"Montserrat":800,"Playfair Display":800,"Archivo Black":400};
 const SIZES={land:[1280,720],poster:[800,1200],square:[1000,1000]};
 const PRE=[["#e50914","#140506"],["#2563eb","#050b24"],["#8b5cf6","#12062b"],["#10b981","#031a12"],["#f97316","#1f0a02"],["#ec4899","#240716"],["#f5c542","#1a1403"],["#6b7488","#0b0d12"]];
-const o={text:"Filmes\nde Ação",font:"Bebas Neue",fmt:"land",layout:"center",c1:PRE[0][0],c2:PRE[0][1],tc:"#ffffff",angle:135,glow:35,vig:true,scale:100,logoScale:100,img:null,bg:null,dark:30,tint:45,blur:0,logoW:"1600",heroRes:"1920",fade:55,heroText:false,ty:0,cut:null,bgBlob:null,mode:"cover"};
+const o={text:"Filmes\nde Ação",font:"Bebas Neue",fmt:"land",layout:"center",c1:PRE[0][0],c2:PRE[0][1],tc:"#ffffff",angle:135,glow:35,vig:true,scale:100,logoScale:100,img:null,bg:null,dark:30,tint:45,blur:0,logoW:"1600",heroRes:"1920",fade:55,heroText:false,showText:true,ty:0,cut:null,bgBlob:null,mode:"cover"};
 const cv=document.getElementById("cv"),ctx=cv.getContext("2d"),$=id=>document.getElementById(id);
 let tok=0,dl=null;
-const lines=()=>{const l=o.text.split("\n").map(s=>s.trim()).filter(Boolean);return l.length?l:[" "]};
+const lines=()=>{if(o.img&&(!o.showText||(o.mode==="hero"&&!o.heroText)))return[];const l=o.text.split("\n").map(s=>s.trim()).filter(Boolean);return l.length?l:[" "]};
 const fnt=s=>FW[o.font]+" "+s+'px "'+o.font+'",sans-serif';
 
 function drawBlock(c,W,H,layout){
   const L=lines(),n=L.length;c.font=fnt(100);
-  const mw=Math.max(...L.map(l=>c.measureText(l).width))||1,maxW=W*(layout==="bottom"?.78:.8);
+  const mw=L.length?Math.max(...L.map(l=>c.measureText(l).width))||1:1,maxW=W*(layout==="bottom"?.78:.8);
   const size=Math.min(maxW/mw*100,H*.24,H*.55/(n*1.02))*o.scale/100,lh=size*1.02,th=n*lh;
   c.font=fnt(size);c.fillStyle=o.tc;c.textBaseline="middle";
   let iw=0,ih=0;const im=o.img&&layout!=="text"?o.img:null;
-  if(im){ih=H*.28*o.logoScale/100;iw=ih*im.naturalWidth/im.naturalHeight;if(iw>W*.6){iw=W*.6;ih=iw*im.naturalHeight/im.naturalWidth}}
+  if(im){ih=H*(n?.28:o.mode==="hero"?.32:.5)*o.logoScale/100;iw=ih*im.naturalWidth/im.naturalHeight;const mx=W*(n?.6:.8);if(iw>mx){iw=mx;ih=iw*im.naturalHeight/im.naturalWidth}}
   const gap=size*.25;
   const put=(x,y,al)=>{c.textAlign=al;c.shadowColor="rgba(0,0,0,.5)";c.shadowBlur=size*.1;c.shadowOffsetY=size*.03;L.forEach((l,i)=>c.fillText(l,x,y+(i+.5)*lh));c.shadowColor="transparent";c.shadowBlur=0;c.shadowOffsetY=0};
-  if(layout==="bottom"){const x=W*.08;if(im)c.drawImage(im,x,H*.08,iw,ih);put(x,H*.92-th,"left")}
+  if(layout==="bottom"){const x=W*.08;if(im)c.drawImage(im,x,H*.92-th-ih-(n?gap:0),iw,ih);put(x,H*.92-th,"left")}
   else if(layout==="band"){const bh=th+size*.5,by=(H-bh)/2;c.fillStyle="rgba(0,0,0,.38)";c.fillRect(0,by,W,bh);c.fillStyle=o.tc;
     if(im)c.drawImage(im,(W-iw)/2,Math.max(H*.04,by-ih-H*.03),iw,ih);put(W/2,by+size*.25,"center")}
   else{const total=(im?ih+gap:0)+th;let y=(H-total)/2;if(im){c.drawImage(im,(W-iw)/2,y,iw,ih);y+=ih+gap}put(W/2,y,"center")}
@@ -220,11 +227,11 @@ function paintHero(){
   const W=+o.heroRes,H=W*9/16;cv.width=W;cv.height=H;paintBg(ctx,W,H,"none");
   const f=o.fade/100;let g=ctx.createLinearGradient(0,0,W,0);g.addColorStop(0,"rgba(0,0,0,"+f*.9+")");g.addColorStop(.7,"rgba(0,0,0,0)");ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
   g=ctx.createLinearGradient(0,H*.5,0,H);g.addColorStop(0,"rgba(0,0,0,0)");g.addColorStop(1,"rgba(0,0,0,"+f*.95+")");ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
-  if(o.heroText)txt(ctx,W,H,"bottom");drawCut(ctx,W,H);
+  if(o.heroText||o.img)txt(ctx,W,H,"bottom");drawCut(ctx,W,H);
 }
 function paintLogo(){
   const L=lines(),n=L.length,B=200,lh=B*1.05;
-  ctx.font=fnt(B);const mw=Math.max(...L.map(l=>ctx.measureText(l).width))||1;
+  ctx.font=fnt(B);const mw=L.length?Math.max(...L.map(l=>ctx.measureText(l).width))||1:1;
   let iw=0,ih=0;const gap=B*.15;
   if(o.img){ih=B*1.4*o.logoScale/100;iw=ih*o.img.naturalWidth/o.img.naturalHeight}
   const cw=Math.max(mw,iw),ch=n*lh+(o.img?ih+gap:0),pad=B*.1,W=+o.logoW,k=W/(cw+2*pad),H=Math.ceil((ch+2*pad)*k);
@@ -300,6 +307,33 @@ async function useBackdrop(fp){tmsg("Baixando imagem...");
     const bl=await r.blob(),im=new Image();im.onload=()=>{setBg(im,bl);tmsg("Fundo aplicado.")};im.src=URL.createObjectURL(bl)}
   catch(e){tmsg(terr(e))}}
 
+const lmsg=t=>{$("lmsg").textContent=t};
+const mkBtn=(txt,fn,box)=>{const b=document.createElement("button");b.className="ghost";b.style.margin="0 6px 6px 0";b.textContent=txt;b.onclick=fn;box.appendChild(b)};
+$("lgo").onclick=async()=>{const q=$("lq").value.trim();if(!q)return;lmsg("Buscando...");$("lres").innerHTML="";$("lthumbs").innerHTML="";
+  try{const[a,c]=await Promise.all([tm("/search/multi",{query:q,language:"pt-BR"}),tm("/search/collection",{query:q,language:"pt-BR"})]);
+    const items=[...c.results.slice(0,4).map(x=>({...x,media_type:"collection"})),...a.results.filter(x=>x.media_type==="movie"||x.media_type==="tv").slice(0,6)];
+    if(!items.length)return lmsg("Nenhum resultado.");
+    lmsg("Escolha o título ou a saga:");
+    items.forEach(x=>{const yr=(x.release_date||x.first_air_date||"").slice(0,4),nm=x.title||x.name;
+      mkBtn((x.media_type==="collection"?"Saga: ":"")+nm+(yr?" ("+yr+")":""),()=>x.media_type==="collection"?pickCollection(x):pickLogos(x.media_type,x.id,nm),$("lres"))})
+  }catch(e){lmsg(terr(e))}};
+async function pickCollection(x){lmsg("Carregando a saga...");$("lres").innerHTML="";$("lthumbs").innerHTML="";
+  try{const d=await tm("/collection/"+x.id,{language:"pt-BR"}),ps=(d.parts||[]).sort((a,b)=>(a.release_date||"").localeCompare(b.release_date||""));
+    if(!ps.length)return lmsg("Essa saga não tem filmes listados.");
+    lmsg("Escolha de qual filme pegar a logo:");
+    ps.forEach(p=>mkBtn(p.title+" ("+(p.release_date||"").slice(0,4)+")",()=>pickLogos("movie",p.id,p.title),$("lres")))
+  }catch(e){lmsg(terr(e))}}
+async function pickLogos(type,id,name){lmsg("Carregando logos...");$("lthumbs").innerHTML="";
+  try{const d=await tm("/"+type+"/"+id+"/images",{include_image_language:"pt,en,null"});
+    const ls=(d.logos||[]).filter(l=>!l.file_path.endsWith(".svg")).slice(0,12);
+    if(!ls.length)return lmsg("Nenhuma logo disponível para "+name+".");
+    lmsg("Clique numa logo para usar.");
+    ls.forEach(l=>{const b=document.createElement("button"),i=document.createElement("img");i.src="https://image.tmdb.org/t/p/w300"+l.file_path;i.alt="Logo de "+name;b.appendChild(i);b.onclick=()=>useLogo(l.file_path);$("lthumbs").appendChild(b)})
+  }catch(e){lmsg(terr(e))}}
+async function useLogo(fp){lmsg("Baixando logo...");
+  try{const r=await fetch("https://image.tmdb.org/t/p/original"+fp);if(!r.ok)throw new Error("img");
+    const bl=await r.blob(),im=new Image();im.onload=()=>{o.img=im;lmsg("Logo aplicada.");render()};im.src=URL.createObjectURL(bl)}
+  catch(e){lmsg(terr(e))}}
 (async()=>{try{if(typeof claude!=="undefined")dl=await claude.use("downloads")}catch(e){}})();
 $("dl").onclick=()=>{
   const slug=(o.text.split("\n")[0]||"capa").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"capa";
@@ -311,7 +345,7 @@ $("dl").onclick=()=>{
     else{const u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download=name;a.click();$("fimg").src=u;$("fallback").hidden=false;$("msg").textContent="Se o download não começou, clique com o botão direito na imagem abaixo e salve."}
   },"image/png");
 };
-const PK=["text","font","fmt","layout","c1","c2","tc","angle","glow","vig","scale","logoScale","dark","tint","blur","logoW","heroRes","fade","heroText","ty"];
+const PK=["text","font","fmt","layout","c1","c2","tc","angle","glow","vig","scale","logoScale","dark","tint","blur","logoW","heroRes","fade","heroText","showText","ty"];
 function save(){try{const s={};PK.forEach(k=>s[k]=o[k]);localStorage.setItem("nuvio_cfg",JSON.stringify(s))}catch(e){}}
 try{const s=JSON.parse(localStorage.getItem("nuvio_cfg")||"null");if(s&&typeof s==="object")PK.forEach(k=>{if(!(k in s))return;const v=s[k];
   if(typeof v!==typeof o[k])return;
