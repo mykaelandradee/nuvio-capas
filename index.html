@@ -215,20 +215,14 @@ de Ação</textarea>
   </div></details>
 
   <details><summary>Coleção em lote</summary><div class="body">
-    <p class="msg">Um nome por linha. Use | para quebrar a linha dentro do nome. Todos usam o estilo atual.</p>
+    <p class="msg">Um título por linha. Use | para quebrar a linha dentro do título. Todos usam o estilo atual.</p>
     <textarea id="bText" placeholder="Harry Potter&#10;Senhor dos Anéis&#10;Star Wars"></textarea>
-    <label class="chk"><input type="checkbox" id="bTmdb" checked> Buscar imagens de cada item no TMDB (usa o tipo de busca e a opção de logo acima)</label>
-    <p class="msg">Para sagas, a opção genérica usa o nome da coleção (ex.: “Harry Potter”), sem reaproveitar a logo de um filme. Para pessoas, busca retratos; para estúdios, busca logos oficiais.</p>
-    <label class="chk"><input type="checkbox" id="bAutoText" checked> Usar o nome genérico encontrado no TMDB como texto</label>
+    <label class="chk"><input type="checkbox" id="bTmdb" checked> Buscar fundo e logo de cada título no TMDB</label>
     <label class="chk"><input type="checkbox" id="bCover" checked> Gerar capa</label>
     <label class="chk"><input type="checkbox" id="bLogo" checked> Gerar logo</label>
     <label class="chk"><input type="checkbox" id="bHero"> Gerar fundo do hero</label>
     <button class="primary full" id="bGo">Gerar coleção (ZIP)</button>
-    <progress id="bprogress" max="100" value="0" style="width:100%;height:8px;margin-top:12px;accent-color:var(--accent)"></progress>
-    <button class="ghost full" id="bRetry" hidden>Tentar novamente apenas as falhas</button>
-    <button class="ghost full" id="restoreDefaults">Restaurar padrões</button>
-    <p class="msg" id="bmsg" aria-live="polite"></p>
-    <div class="chips" id="bresults" aria-live="polite"></div>
+    <p class="msg" id="bmsg"></p>
   </div></details>
 
   <details><summary>Exportação</summary><div class="body">
@@ -488,39 +482,28 @@ $("zipBtn").onclick=async()=>{if(typeof JSZip==="undefined")return msg("Não foi
   await saveBlob(await z.generateAsync({type:"blob"}),s+"-nuvio.zip")};
 
 /* lote */
-const bmsg=(t,v)=>{$("bmsg").textContent=tr(t,v)};
-let failedBatchNames=[];
+const bmsg=t=>{$("bmsg").textContent=t};
 $("bGo").onclick=async()=>{
   const names=$("bText").value.split("\n").map(s=>s.trim()).filter(Boolean).slice(0,40);
-  if(!names.length)return bmsg("Escreva um nome por linha.");
+  if(!names.length)return bmsg("Escreva um título por linha.");
   const outs=[["cover",$("bCover").checked],["logo",$("bLogo").checked],["hero",$("bHero").checked]].filter(x=>x[1]).map(x=>x[0]);
   if(!outs.length)return bmsg("Marque pelo menos um tipo de arquivo.");
   if(typeof JSZip==="undefined")return bmsg("Não foi possível carregar o módulo de ZIP.");
-  const keep={text:o.text,bg:o.bg,bgBlob:o.bgBlob,cut:o.cut,img:o.img},z=new JSZip(),useTm=$("bTmdb").checked;let fails=0,done=0,fallbacks=0;failedBatchNames=[];
-  $("bGo").disabled=true;$("bRetry").hidden=true;$("bresults").innerHTML="";$("bprogress").value=0;
+  const keep={text:o.text,bg:o.bg,bgBlob:o.bgBlob,cut:o.cut,img:o.img},z=new JSZip(),useTm=$("bTmdb").checked;let fails=0;
+  $("bGo").disabled=true;
   try{for(let i=0;i<names.length;i++){
-      const raw=names[i].replace(/\s*\|\s*/g,"\n");bmsg("Gerando {a} de {b}: {c}",{a:i+1,b:names.length,c:names[i]});
-      o.text=raw;o.bg=useTm?null:keep.bg;o.bgBlob=useTm?null:keep.bgBlob;o.img=useTm?null:keep.img;o.cut=useTm?null:keep.cut;
+      const raw=names[i].replace(/\s*\|\s*/g,"\n");bmsg("Gerando "+(i+1)+" de "+names.length+": "+names[i]);
+      o.text=raw;o.bg=keep.bg;o.bgBlob=keep.bgBlob;o.img=keep.img;o.cut=useTm?null:keep.cut;
       if(useTm){try{const r=await tmBest(names[i].replace(/\s*\|\s*/g," "));
-          let found=false;
-          if(r.backs[0]){const p=r.backs[0];const blob=await tmImg(p.file_path,p.profile?"original":"w1280");o.bg=await blobImg(blob);o.bgBlob=blob;found=true}
-          if(r.logos[0]){o.img=await blobImg(await tmImg(r.logos[0].file_path,"original"));found=true}
-          if(!found){o.bg=keep.bg;o.bgBlob=keep.bgBlob;o.img=keep.img;fallbacks++}
-          if($("bAutoText").checked)o.text=String(r.text||r.name||raw).replace(/\s*\|\s*/g,"\n");
-        }catch(e){
-          if(e.message==="none"||e.message==="no-images"){o.bg=keep.bg;o.bgBlob=keep.bgBlob;o.img=keep.img;fallbacks++}
-          else{fails++;failedBatchNames.push(names[i]);const er=document.createElement("span");er.className="dim";er.title=e.message||String(e);er.textContent="✕ "+names[i]+" — "+(e.message||"erro TMDB");$("bresults").appendChild(er);$("bprogress").value=(i+1)/names.length*100;continue}
-        }}
+          if(r.backs[0])o.bg=await blobImg(await tmImg(r.backs[0].file_path,"w1280"));
+          if(r.logos[0])o.img=await blobImg(await tmImg(r.logos[0].file_path,"original"));
+          if($("autoText").checked&&!/\n/.test(raw))o.text=r.name}catch(e){fails++}}
       try{await document.fonts.load(fnt(100),o.text)}catch(e){}
-      for(const m of outs)await addToZip(z,String(i+1).padStart(2,"0")+"-"+slug(raw)+"-"+(m==="cover"?"capa":m),m,o.fmt);
-      done++;const ok=document.createElement("span");ok.className="dim";ok.textContent="✓ "+names[i];$("bresults").appendChild(ok);$("bprogress").value=(i+1)/names.length*100}
-    if(done)await saveBlob(await z.generateAsync({type:"blob"}),"colecao-nuvio.zip");
-    if(failedBatchNames.length){$("bRetry").hidden=false;bmsg("Pronto: {n} gerado(s), {f} falha(s), {b} com fundo padrão.",{n:done,f:fails,b:fallbacks})}
-    else if(fallbacks)bmsg("Pronto: {n} item(ns), {b} sem imagens do TMDB (usado fundo atual ou degradê).",{n:done,b:fallbacks})
-    else bmsg("Pronto: {n} item(ns).",{n:done})}
+      for(const m of outs)await addToZip(z,String(i+1).padStart(2,"0")+"-"+slug(raw)+"-"+(m==="cover"?"capa":m),m,o.fmt)}
+    await saveBlob(await z.generateAsync({type:"blob"}),"colecao-nuvio.zip");
+    bmsg("Pronto: "+names.length+" título(s)."+(fails?" "+fails+" sem imagens do TMDB (usou o fundo atual).":""))}
   catch(e){bmsg("Algo deu errado no lote. Confira o token do TMDB e tente de novo.")}
-  finally{Object.assign(o,keep);$("bGo").disabled=false;sync();render()}}; 
-$("bRetry").onclick=()=>{if(!failedBatchNames.length)return;$("bText").value=failedBatchNames.join("\n");$("bGo").click()};
+  finally{Object.assign(o,keep);$("bGo").disabled=false;sync();render()}};
 
 /* configurações, paletas e estilos */
 function cfgNow(){const s={};PK.forEach(k=>s[k]=o[k]);return s}
@@ -558,15 +541,14 @@ function restoreDefaults(){
   ["tres","parts","tback","tlogo"].forEach(i=>$(i).innerHTML="");
   $("lb1").hidden=$("lb2").hidden=true;
   $("bText").value="";
-  $("bTmdb").checked=true;$("bAutoText").checked=true;
+  $("bTmdb").checked=true;
   $("bCover").checked=true;$("bLogo").checked=true;$("bHero").checked=false;
   try{localStorage.removeItem("nuvio_cfg")}catch(e){}
-  cmsg("");sync();render();$("bprogress").value=0;$("bRetry").hidden=true;$("bresults").innerHTML="";failedBatchNames=[];
+  cmsg("");sync();render();
   bmsg("Configurações e imagens restauradas para o padrão.");
   msg("Tudo foi redefinido para o padrão.");
 }
 $("resetTop").onclick=()=>{if(window.confirm("Restaurar todas as configurações e remover as imagens atuais?"))restoreDefaults()};
-$("restoreDefaults").onclick=()=>{if(window.confirm("Restaurar configurações, opções do lote e remover as imagens atuais?"))restoreDefaults()};
 document.querySelectorAll("details[data-reset]").forEach(d=>{const b=document.createElement("button");b.className="ghost full";b.textContent="Redefinir esta seção";b.onclick=()=>{d.dataset.reset.split(",").forEach(k=>o[k]=D[k]);sync();render();msg("Seção redefinida.")};d.querySelector(".body").appendChild(b)});
 $("lang").onclick=()=>{lang=lang==="pt"?"en":"pt";try{localStorage.setItem("nuvio_lang",lang)}catch(e){}applyLang()};
 drawPal();drawStyles();sync();applyMode();collect();applyLang();render();
