@@ -73,7 +73,17 @@ input[type=color]{width:100%;height:42px;border:0;border-radius:12px;background:
 .chk{display:flex;gap:8px;align-items:center;color:var(--text)!important;font-weight:500!important}
 .thumbs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}
 .thumbs button{padding:0;border:0;border-radius:10px;overflow:hidden;cursor:pointer;background:var(--chip)}
-.thumbs img{width:100%;display:block}
+.thumbs img{width:100%;display:block;transition:transform .18s ease}
+.thumbs button{outline:1px solid transparent;transition:outline-color .18s,transform .18s}
+.thumbs button:hover{outline-color:var(--accent);transform:translateY(-2px)}
+.panel details[open] summary{color:var(--accent)}
+.panel summary{min-height:44px}
+.panel .body{animation:panelIn .16s ease-out}
+@keyframes panelIn{from{opacity:.65;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}
+#bprogress{display:block;border:0;border-radius:999px;overflow:hidden;background:var(--chip)}
+#bprogress::-webkit-progress-bar{background:var(--chip);border-radius:999px}
+#bprogress::-webkit-progress-value{background:var(--accent);border-radius:999px}
+#bprogress::-moz-progress-bar{background:var(--accent);border-radius:999px}
 .thumbs.lg button{background:#1b1f2a;padding:8px}
 .thumbs.lg img{height:64px;object-fit:contain}
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
@@ -154,7 +164,7 @@ de Ação</textarea>
     <label class="chk" data-m="hero"><input type="checkbox" id="heroText" data-k="heroText"> Incluir o título no fundo do hero</label>
   </div></details>
 
-  <details open><summary>Formato</summary><div class="body">
+  <details><summary>Formato</summary><div class="body">
     <div data-m="cover"><label id="fl">Proporção da capa</label>
       <div class="seg" id="fmt" role="group" aria-labelledby="fl"><button data-v="land" aria-pressed="true">Paisagem 16:9</button><button data-v="poster" aria-pressed="false">Poster 2:3</button><button data-v="square" aria-pressed="false">Quadrado</button></div>
       <label for="layout">Composição</label>
@@ -180,7 +190,7 @@ de Ação</textarea>
     <div class="row"><div><label for="sat">Saturação</label><input type="range" id="sat" data-k="sat" min="0" max="200"></div><div><label for="gray">Preto e branco</label><input type="range" id="gray" data-k="gray" min="0" max="100"></div></div>
   </div></details>
 
-  <details open data-m="cover hero" data-reset="c1,c2,angle,glow,vig"><summary>Cores e degradê</summary><div class="body">
+  <details data-m="cover hero" data-reset="c1,c2,angle,glow,vig"><summary>Cores e degradê</summary><div class="body">
     <div class="presets" id="presets"></div><div class="presets" id="mypal" style="margin-top:8px"></div>
     <div class="row" style="margin-top:10px"><button class="ghost" id="savePal">Salvar esta paleta</button><button class="ghost" id="clrPal">Limpar salvas</button></div>
     <div class="row" style="margin-top:12px"><div><label for="c1">Cor A</label><input type="color" id="c1" data-k="c1"></div><div><label for="c2">Cor B</label><input type="color" id="c2" data-k="c2"></div></div>
