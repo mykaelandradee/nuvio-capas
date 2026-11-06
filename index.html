@@ -411,7 +411,7 @@ async function applyBack(p){tmsg("Baixando fundo...");try{const b=await tmImg(p.
 async function applyLogo(fp){tmsg("Baixando logo...");try{o.img=await blobImg(await tmImg(fp,"original"));render();tmsg("Logo aplicada.")}catch(e){tmsg(terr(e))}}
 async function personMovies(r){const d=await tm("/person/"+r.id+"/movie_credits",{language:L2()});let a=r.known_for_department==="Directing"?(d.crew||[]).filter(x=>x.job==="Director"):(d.cast||[]);if(!a.length)a=[...(d.cast||[]),...(d.crew||[])];const seen=new Set();return a.filter(x=>!seen.has(x.id)&&seen.add(x.id)).sort((x,y)=>(y.popularity||0)-(x.popularity||0)).slice(0,12)}
 async function companyMovies(r){return(await tm("/discover/movie",{with_companies:r.id,sort_by:"popularity.desc",language:L2()})).results.slice(0,12)}
-async function firstBackdrop(list){for(const m of list.slice(0,10)){const im=await tm("/movie/"+m.id+"/images",{include_image_language:langs()}),b=textless(im.backdrops);if(b.length)return b;const any=rankBackdrops(im.backdrops);if(any.length)return any}return[]}
+async function firstBackdrop(list){for(const m of list.slice(0,20)){const im=await tm("/movie/"+m.id+"/images",{include_image_language:langs()}),b=textless(im.backdrops);if(b.length)return b;const any=rankBackdrops(im.backdrops);if(any.length)return any}return[]}
 function movieBtns(arr,name){const box=$("parts");mkLabel(tr("Filmes de {n}:",{n:name}),box);
   arr.forEach(m=>mkBtn(m.title||m.name,async()=>{tmsg("Carregando imagens de {n}...",{n:m.title||m.name});
     try{const im=await tm("/movie/"+m.id+"/images",{include_image_language:langs()});T.backs=[...T.kb,...textless(im.backdrops)];T.logos=[...T.keep,...goodLogos(im.logos)];showThumbs();tmsg("Clique num fundo ou numa logo para usar.")}catch(e){tmsg(terr(e))}},box))}
@@ -448,14 +448,16 @@ async function tmBest(q){const lg=L2(),film=o.sagaLogo==="film";
     const backs=await firstBackdrop(await companyMovies(r));
     return{name:r.name,text:r.name,backs,logos:film?goodLogos((await tm("/company/"+r.id+"/images")).logos):[]}}
   const[a,c]=await Promise.all([tm("/search/multi",{query:q,language:lg}),tm("/search/collection",{query:q,language:lg})]);
-  const m=a.results.find(x=>x.media_type==="movie"||x.media_type==="tv");
+  const m=a.results.filter(x=>x.media_type==="movie"||x.media_type==="tv").sort((x,y)=>matchScore(y.title||y.name,q)-matchScore(x.title||x.name,q)||(y.popularity||0)-(x.popularity||0))[0];
   let col=[...c.results].sort((a,b)=>matchScore(b.name,q)-matchScore(a.name,q)||(b.parts?.length||0)-(a.parts?.length||0))[0];
   if(col&&matchScore(col.name,q)<35)col=null;
   if(!col&&m&&m.media_type==="movie"){try{const d=await tm("/movie/"+m.id,{language:lg});if(d.belongs_to_collection)col=d.belongs_to_collection}catch(e){}}
-  if(col){const[d,im]=await Promise.all([tm("/collection/"+col.id,{language:lg}),tm("/collection/"+col.id+"/images",{include_image_language:"null"})]);
+  if(col){const[d,im]=await Promise.all([tm("/collection/"+col.id,{language:lg}),tm("/collection/"+col.id+"/images",{include_image_language:langs()})]);
     const ps=(d.parts||[]).slice().sort((a,b)=>(b.popularity||0)-(a.popularity||0));let backs=rankBackdrops(im.backdrops),logos=[];
     if(!backs.length&&ps.length)backs=await firstBackdrop(ps);
-    if(film){for(const p of ps.slice(0,10)){const li=await tm("/movie/"+p.id+"/images",{include_image_language:langs()});logos=goodLogos(li.logos);if(logos.length)break}}
+    if(!backs.length&&d.backdrop_path)backs=[{file_path:d.backdrop_path,aspect_ratio:1.78,iso_639_1:null}];
+    if(!backs.length&&d.poster_path)backs=[{file_path:d.poster_path,aspect_ratio:0.667,iso_639_1:null}];
+    if(film){for(const p of ps.slice(0,20)){const li=await tm("/movie/"+p.id+"/images",{include_image_language:langs()});logos=goodLogos(li.logos);if(logos.length)break}}
     return{name:col.name,text:cleanSaga(col.name),backs,logos}}
   if(m){const im=await tm("/"+m.media_type+"/"+m.id+"/images",{include_image_language:langs()});return{name:m.title||m.name,text:m.title||m.name,backs:(textless(im.backdrops).length?textless(im.backdrops):rankBackdrops(im.backdrops)),logos:goodLogos(im.logos)}}
   throw new Error("none")}
@@ -532,6 +534,7 @@ function applyCfg(s){if(!s||typeof s!=="object")return;PK.forEach(k=>{if(!(k in 
   o[k]=v})}
 function save(){try{localStorage.setItem("nuvio_cfg",JSON.stringify(cfgNow()))}catch(e){}}
 try{applyCfg(JSON.parse(localStorage.getItem("nuvio_cfg")||"null"))}catch(e){}
+if(o.sagaLogo==="text"){o.sagaLogo="film";$("sagaLogo").value="film";try{localStorage.setItem("nuvio_cfg",JSON.stringify(cfgNow()))}catch(e){}}
 const hx=/^#[0-9a-f]{6}$/i;
 let mine=[];try{const m=JSON.parse(localStorage.getItem("nuvio_pal")||"[]");mine=(Array.isArray(m)?m:[]).filter(p=>Array.isArray(p)&&hx.test(p[0])&&hx.test(p[1])).slice(-16)}catch(e){}
 function drawPal(){const g=$("mypal");g.innerHTML="";mine.forEach(([a,b],i)=>{const e=document.createElement("button");e.style.background="linear-gradient(135deg,"+a+","+b+")";e.setAttribute("aria-label",tr("Paleta salva")+" "+(i+1));e.onclick=()=>{o.c1=a;o.c2=b;sync();render()};g.appendChild(e)})}
