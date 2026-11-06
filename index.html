@@ -403,6 +403,14 @@ const lp=l=>{const a=lang==="en"?"en":"pt",b=lang==="en"?"pt":"en";return l.iso_
 const goodLogos=l=>(l||[]).filter(x=>!x.file_path.endsWith(".svg")).sort((a,b)=>lp(a)-lp(b));
 const textless=b=>(b||[]).filter(x=>!x.iso_639_1);
 const cleanSaga=n=>String(n||"").replace(/\s*[\(\[]?\s*[-–:]?\s*(coleção|colecao|collection|saga|trilogia|trilogy|film collection|movie collection)\s*[\)\]]?\s*$/i,"").replace(/^\s*(coleção|collection|saga)\s*[-–:]?\s*/i,"").replace(/\s+/g," ").trim()||n;
+const normSearch=s=>String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
+function rankResults(items,q,getName=x=>x.title||x.name||""){
+  const target=normSearch(q);
+  return [...(items||[])].sort((a,b)=>{
+    const score=x=>{const n=normSearch(getName(x));return n===target?1000:n.startsWith(target)?700:n.includes(target)?500:0};
+    return score(b)-score(a)||(b.popularity||0)-(a.popularity||0)||(b.vote_count||0)-(a.vote_count||0);
+  });
+}
 const mkBtn=(t,fn,box)=>{const b=document.createElement("button");b.className="ghost";b.style.margin="0 6px 6px 0";b.textContent=tr(t);b.onclick=fn;box.appendChild(b)};
 const mkLabel=(t,box)=>{const l=document.createElement("label");l.textContent=t;box.appendChild(l)};
 const thumb=(fp,alt,fn)=>{const b=document.createElement("button"),i=document.createElement("img");i.src="https://image.tmdb.org/t/p/w300"+fp;i.alt=tr(alt);i.loading="lazy";b.appendChild(i);b.onclick=fn;return b};
@@ -439,10 +447,12 @@ function movieBtns(arr,name){const box=$("parts");mkLabel(tr("Filmes de {n}:",{n
 async function tmSearch(){const q=$("tq").value.trim();if(!q)return tmsg("Digite um nome para buscar.");
   tmsg("Buscando...");["tres","parts","tback","tlogo"].forEach(i=>$(i).innerHTML="");$("lb1").hidden=$("lb2").hidden=true;
   try{let items=[];
-    if(o.stype==="person")items=(await tm("/search/person",{query:q,language:L2()})).results.slice(0,8).map(x=>({...x,media_type:"person",hint:(x.known_for&&x.known_for[0]&&(x.known_for[0].title||x.known_for[0].name))||""}));
-    else if(o.stype==="company")items=(await tm("/search/company",{query:q})).results.slice(0,8).map(x=>({...x,media_type:"company"}));
+    if(o.stype==="person")items=rankResults((await tm("/search/person",{query:q,language:L2()})).results,q).slice(0,8).map(x=>({...x,media_type:"person",hint:(x.known_for&&x.known_for[0]&&(x.known_for[0].title||x.known_for[0].name))||""}));
+    else if(o.stype==="company")items=rankResults((await tm("/search/company",{query:q})).results,q).slice(0,8).map(x=>({...x,media_type:"company"}));
     else{const[a,c]=await Promise.all([tm("/search/multi",{query:q,language:L2()}),tm("/search/collection",{query:q,language:L2()})]);
-      items=[...c.results.slice(0,4).map(x=>({...x,media_type:"collection"})),...a.results.filter(x=>x.media_type==="movie"||x.media_type==="tv").slice(0,6)]}
+      const collections=rankResults(c.results,q).slice(0,4).map(x=>({...x,media_type:"collection"}));
+      const titles=rankResults(a.results.filter(x=>x.media_type==="movie"||x.media_type==="tv"),q).slice(0,6);
+      items=[...collections,...titles]}
     if(!items.length)return tmsg("Nenhum resultado.");
     tmsg("Escolha uma opção:");
     items.forEach(x=>{const yr=(x.release_date||x.first_air_date||"").slice(0,4);mkBtn((x.media_type==="collection"?tr("Saga")+": ":"")+(x.title||x.name)+(yr?" ("+yr+")":"")+(x.hint?" · "+x.hint:""),()=>pickItem(x),$("tres"))})
@@ -461,16 +471,16 @@ async function pickItem(x){const name=x.title||x.name,k=x.media_type;tmsg("Carre
     showThumbs();tmsg(T.backs.length||T.logos.length||$("parts").children.length?"Clique num fundo ou numa logo para usar.":"Sem imagens disponíveis para esse título.")}
   catch(e){tmsg(terr(e))}}
 async function tmBest(q){const lg=L2(),film=o.sagaLogo==="film";
-  if(o.stype==="person"){const r=(await tm("/search/person",{query:q,language:lg})).results[0];if(!r)throw new Error("none");
+  if(o.stype==="person"){const r=rankResults((await tm("/search/person",{query:q,language:lg})).results,q)[0];if(!r)throw new Error("none");
     const profiles=((await tm("/person/"+r.id+"/images")).profiles||[]).map(p=>({...p,profile:true}));
     const backs=profiles.length?profiles:await firstBackdrop(await personMovies(r));
     return{name:r.name,text:r.name,backs,logos:[]}}
-  if(o.stype==="company"){const r=(await tm("/search/company",{query:q})).results[0];if(!r)throw new Error("none");
+  if(o.stype==="company"){const r=rankResults((await tm("/search/company",{query:q})).results,q)[0];if(!r)throw new Error("none");
     const [backs,ci]=await Promise.all([firstBackdrop(await companyMovies(r)),tm("/company/"+r.id+"/images")]);
     return{name:r.name,text:r.name,backs,logos:goodLogos(ci.logos)}}
   const[a,c]=await Promise.all([tm("/search/multi",{query:q,language:lg}),tm("/search/collection",{query:q,language:lg})]);
-  const m=a.results.find(x=>x.media_type==="movie"||x.media_type==="tv");
-  let col=c.results.find(x=>(x.name||"").toLowerCase().includes(q.toLowerCase()));
+  const m=rankResults(a.results.filter(x=>x.media_type==="movie"||x.media_type==="tv"),q)[0];
+  const col=rankResults(c.results,q)[0];
   if(!col&&m&&m.media_type==="movie"&&(m.title||"").toLowerCase()!==q.toLowerCase()){try{const d=await tm("/movie/"+m.id,{language:lg});if(d.belongs_to_collection)col=d.belongs_to_collection}catch(e){}}
   if(col){
     const assets=await sagaAssets(col);
