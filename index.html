@@ -433,7 +433,7 @@ async function sagaAssets(collection){
   for(const movie of parts.slice(0,30)){
     try{const images=await tm("/movie/"+movie.id+"/images",{include_image_language:langs()});
       textless(images.backdrops).forEach(x=>backPool.push(x));
-      goodLogos(images.logos).forEach(x=>logoPool.push(x));
+      // Movie-level logos are intentionally excluded: they may include a specific film subtitle.
     }catch(e){}
   }
   const unique=a=>[...new Map(a.map(x=>[x.file_path,x])).values()];
@@ -488,16 +488,10 @@ async function tmBest(q,opts={}){
   ]);
   const target=normSearch(q);
   const movies=rankResults((multi.results||[]).filter(x=>x.media_type==="movie"),q);
-  const exactMovie=movies.find(x=>normSearch(x.title)===target);
   const collectionList=rankResults(collections.results||[],q);
   const exactCollection=collectionList.find(x=>normSearch(cleanSaga(x.name))===target);
-  if(exactMovie){
-    const details=await tm("/movie/"+exactMovie.id,{language:lg});
-    const images=await tm("/movie/"+exactMovie.id+"/images",{include_image_language:langs()});
-    return{name:details.title||exactMovie.title,text:details.title||exactMovie.title,backs:textless(images.backdrops),logos:goodLogos(images.logos),kind:"movie"};
-  }
   let collection=exactCollection;
-  if(!collection&&movies[0]){
+  if(!collection&&!movies.some(x=>normSearch(x.title)===target)&&movies[0]){
     const details=await tm("/movie/"+movies[0].id,{language:lg});
     if(details.belongs_to_collection){
       const n=normSearch(cleanSaga(details.belongs_to_collection.name));
@@ -507,6 +501,12 @@ async function tmBest(q,opts={}){
   if(collection){
     const assets=await sagaAssets(collection);
     return{name:collection.name,text:cleanSaga(collection.name),backs:assets.backs,logos:assets.logos,kind:"collection"};
+  }
+  const exactMovie=movies.find(x=>normSearch(x.title)===target);
+  if(exactMovie){
+    const details=await tm("/movie/"+exactMovie.id,{language:lg});
+    const images=await tm("/movie/"+exactMovie.id+"/images",{include_image_language:langs()});
+    return{name:details.title||exactMovie.title,text:details.title||exactMovie.title,backs:textless(images.backdrops),logos:goodLogos(images.logos),kind:"movie"};
   }
   const best=movies[0]||(multi.results||[]).filter(x=>x.media_type==="tv").sort(byPopularity)[0];
   if(best){
@@ -520,7 +520,7 @@ $("tauto").onclick=async()=>{const q=$("tq").value.trim();if(!q)return tmsg("Dig
   try{const r=await tmBest(q);
     if(r.backs.length){const p=r.backs[Math.floor(Math.random()*r.backs.length)],b=await tmImg(p.file_path,imgSize(p));setBg(await blobImg(b),b)}
     o.img=r.logos[0]?await blobImg(await tmImg(r.logos[0].file_path,"original")):null;
-    if($("autoText").checked)o.text=r.text;
+    if($("autoText").checked)o.text=r.logos&&r.logos.length?"":r.text;
     sync();render();tmsg("Pronto: {n}. Ajuste o que quiser e baixe.",{n:r.name})}
   catch(e){tmsg(terr(e))}};
 
@@ -569,7 +569,7 @@ async function runBatch(names){
             o.bg=await blobImg(blob);o.bgBlob=blob;o.cut=null;
           }
           o.img=r.logos&&r.logos[0]?await blobImg(await tmImg(r.logos[0].file_path,"original")):null;
-          if($("bAutoText").checked)o.text=String(r.text||r.name||raw).replace(/\s*\|\s*/g,"\n");
+          if($("bAutoText").checked)o.text=r.logos&&r.logos.length?"":String(r.text||r.name||raw).replace(/\s*\|\s*/g,"\n");
         }catch(e){
           ok=false;failed.push(original);
           o.bg=keep.bg;o.bgBlob=keep.bgBlob;o.img=keep.img;o.cut=keep.cut;
