@@ -480,7 +480,7 @@ async function tmBest(q){const lg=L2(),film=o.sagaLogo==="film";
     return{name:r.name,text:r.name,backs,logos:goodLogos(ci.logos)}}
   const[a,c]=await Promise.all([tm("/search/multi",{query:q,language:lg}),tm("/search/collection",{query:q,language:lg})]);
   const m=rankResults(a.results.filter(x=>x.media_type==="movie"||x.media_type==="tv"),q)[0];
-  const col=rankResults(c.results,q)[0];
+  let col=rankResults(c.results,q)[0];
   if(!col&&m&&m.media_type==="movie"&&(m.title||"").toLowerCase()!==q.toLowerCase()){try{const d=await tm("/movie/"+m.id,{language:lg});if(d.belongs_to_collection)col=d.belongs_to_collection}catch(e){}}
   if(col){
     const assets=await sagaAssets(col);
