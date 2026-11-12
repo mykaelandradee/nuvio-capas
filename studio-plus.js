@@ -103,6 +103,43 @@ function applyPal(){
   o.c1=p.c1;o.c2=p.c2;o.tc=p.tc;sync();render();msg("Cores aplicadas a partir da imagem.");
 }
 
+/* Composição automática: procura uma área menos clara e menos carregada para o título. */
+function autoCompose(){
+  if(!o.bg)return msg("Escolha uma imagem de fundo primeiro.");
+  if(o.mode==="logo")return msg("Ajuste automático disponível para capas e fundos de hero.");
+  const sample=document.createElement("canvas");sample.width=96;sample.height=54;
+  const c=sample.getContext("2d",{willReadFrequently:true});
+  try{c.drawImage(o.bg,0,0,sample.width,sample.height)}catch(e){return msg("Não foi possível analisar esta imagem.")};
+  const px=c.getImageData(0,0,sample.width,sample.height).data;
+  const regions=[
+    {layout:"center",x0:12,y0:12,x1:84,y1:42},
+    {layout:"bottom",x0:8,y0:34,x1:84,y1:52},
+    {layout:"band",x0:8,y0:17,x1:88,y1:37}
+  ];
+  const stats=regions.map(r=>{
+    let sum=0,edges=0,n=0;
+    const lumAt=(x,y)=>{const i=(y*sample.width+x)*4;return .2126*px[i]+.7152*px[i+1]+.0722*px[i+2]};
+    for(let y=r.y0;y<r.y1;y+=2)for(let x=r.x0;x<r.x1;x+=2){
+      sum+=lumAt(x,y);edges+=Math.abs(lumAt(Math.min(95,x+2),y)-lumAt(x,y))+Math.abs(lumAt(x,Math.min(53,y+2))-lumAt(x,y));n++;
+    }
+    const brightness=sum/Math.max(1,n),detail=edges/Math.max(1,n*2);
+    return{...r,brightness,score:brightness*.72+detail*.28};
+  }).sort((a,b)=>a.score-b.score);
+  const best=stats[0];
+  o.layout=best.layout;o.tx=0;o.ty=0;
+  const extra=Math.min(62,Math.max(0,Math.round((best.brightness-55)*.55)));
+  o.dark=Math.max(o.dark,extra);
+  if(o.mode==="hero")o.fade=Math.max(o.fade,48);
+  sync();render();msg("Composição ajustada: {n}. Revise o resultado e faça ajustes se necessário.",{n:tr(best.layout==="center"?"Centralizada":best.layout==="bottom"?"Texto no rodapé":"Faixa no meio")});
+}
+function showOriginalBackground(){
+  if(!o.bg||o.mode==="logo")return;
+  const W=o.mode==="hero"?+o.heroRes:SIZES[o.fmt][0],H=o.mode==="hero"?W*9/16:SIZES[o.fmt][1];
+  const [iw,ih]=wh(o.bg),scale=Math.max(W/iw,H/ih)*o.bz/100,w=iw*scale,h=ih*scale;
+  cv.width=W;cv.height=H;const c=cv.getContext("2d");c.clearRect(0,0,W,H);
+  c.drawImage(o.bg,(W-w)/2+W*o.bx/100,(H-h)/2+H*o.by/100,w,h);
+}
+
 const HS={s:[],i:-1,skip:false,t:0};
 const snapshot=()=>JSON.stringify(cfgNow());
 function pushHist(){if(HS.skip)return;const s=snapshot();if(HS.s[HS.i]===s)return;HS.s=HS.s.slice(0,HS.i+1);HS.s.push(s);if(HS.s.length>80)HS.s.shift();HS.i=HS.s.length-1;updUndo()}
@@ -303,6 +340,9 @@ function init(){
   const pst=html('<details open><summary>Estilos prontos</summary><div class="body"><p class="msg">Aplica fontes, cores e efeitos de uma vez. O texto e as imagens não mudam.</p><div id="pstGrid"></div></div></details>');
   PRESETS.forEach(([n,c])=>{const b=document.createElement("button");b.className="pst";b.innerHTML='<canvas width="160" height="90"></canvas><span></span>';b.lastChild.textContent=n;b.onclick=()=>applyPreset(n,c);pst.querySelector("#pstGrid").appendChild(b)});
   if(tit)tit.insertAdjacentElement("beforebegin",pst);
+  const autoBtn=html('<button class="ghost full" id="autoCompose" data-m="cover hero">Ajustar composição automaticamente</button>');
+  pst.querySelector(".body").appendChild(autoBtn);
+  autoBtn.querySelector("#autoCompose").onclick=autoCompose;
 
   /* efeitos */
   const cores=document.querySelector('details[data-reset^="c1,"]');
@@ -333,6 +373,14 @@ function init(){
   /* zona segura */
   const view=$("view");
   const gd=html('<div id="guide" hidden></div>');view.appendChild(gd);
+  const compare=html('<button class="ghost full" id="compareBg" data-m="cover hero">Segure para ver o fundo original</button>');
+  view.insertAdjacentElement("afterend",compare);
+  compare.addEventListener("pointerdown",e=>{e.preventDefault();if(!o.bg)return msg("Escolha uma imagem de fundo primeiro.");compare.setPointerCapture(e.pointerId);showOriginalBackground()});
+  ["pointerup","pointercancel","lostpointercapture"].forEach(ev=>compare.addEventListener(ev,()=>render()));
+  compare.addEventListener("keydown",e=>{if(e.key===" "||e.key==="Enter"){e.preventDefault();showOriginalBackground()}});
+  compare.addEventListener("keyup",e=>{if(e.key===" "||e.key==="Enter"){e.preventDefault();render()}});
+  compare.addEventListener("blur",()=>render());
+
   const sz=html('<div class="msg" style="margin:8px 4px 0"><label class="chk" style="margin:0"><input type="checkbox" id="safeZ"> Zona segura da TV</label></div>');
   view.insertAdjacentElement("afterend",sz);$("safeZ").onchange=updGuide;addEventListener("resize",updGuide);
 
@@ -348,6 +396,19 @@ function init(){
     if(e.key==="ArrowLeft")d=["tx",-s];else if(e.key==="ArrowRight")d=["tx",s];else if(e.key==="ArrowUp")d=["ty",-s];else if(e.key==="ArrowDown")d=["ty",s];
     if(!d||o.mode==="logo")return;e.preventDefault();o[d[0]]=Math.max(-40,Math.min(40,o[d[0]]+d[1]));sync();render();
   });
+
+  /* seleção automática: prioriza o fundo melhor avaliado, sem sorteio. */
+  $("tauto").onclick=async()=>{
+    const q=$("tq").value.trim();if(!q)return tmsg("Digite o nome primeiro.");
+    tmsg("Montando...");
+    try{
+      const r=await tmBest(q),backs=bestFirst(r.backs||[]);
+      if(backs.length){const p=backs[0],blob=await tmImg(p.file_path,imgSize(p));setBg(await blobImg(blob),blob)}
+      o.img=r.logos&&r.logos[0]?await blobImg(await tmImg(r.logos[0].file_path,"original")):null;
+      if($("autoText").checked)o.text=r.logos&&r.logos.length?"":r.text;
+      sync();render();tmsg("Pronto: {n}. Ajuste o que quiser e baixe.",{n:r.name});
+    }catch(e){tmsg(terr(e))}
+  };
 
   /* token: campo, teste e diagnóstico */
   const tk=$("tkey");
@@ -402,6 +463,9 @@ Object.assign(EN,{
 "Efeitos":"Effects","Cartão de vidro atrás do título":"Glass card behind the title","Desfoque do vidro":"Glass blur","Brilho do vidro":"Glass brightness","Cantos arredondados":"Rounded corners","Margem do cartão":"Card padding",
 "Grão de filme":"Film grain","Degradê no texto":"Gradient on text","Cor final do degradê":"Gradient end color","Brilho neon no texto":"Neon glow on text","Sombra do assunto recortado":"Cutout shadow","Moldura":"Frame","Cor da moldura":"Frame color",
 "Cores a partir da imagem":"Colors from the image","Aplicar ao escolher um fundo":"Apply when choosing a background","Escolha uma imagem de fundo primeiro.":"Choose a background image first.","Cores aplicadas a partir da imagem.":"Colors applied from the image.",
+"Ajustar composição automaticamente":"Auto-adjust composition","Segure para ver o fundo original":"Hold to view original background","Ajuste automático disponível para capas e fundos de hero.":"Automatic adjustment is available for covers and hero backgrounds.",
+"Não foi possível analisar esta imagem.":"Could not analyze this image.","Composição ajustada: {n}. Revise o resultado e faça ajustes se necessário.":"Composition adjusted: {n}. Review the result and make any necessary tweaks.",
+
 "Desfazer":"Undo","Refazer":"Redo","Zona segura da TV":"TV safe zone","Pré-visualização. Use as setas para mover o título.":"Preview. Use the arrow keys to move the title.",
 "Escolha do fundo":"Background choice","Melhor avaliado":"Top rated","Aleatório":"Random","Buscar e revisar":"Search and review","Cancelar":"Cancel","Baixar ZIP":"Download ZIP","Outro fundo":"Another background","Remover":"Remove","Repetir falhas ({n})":"Retry failed ({n})","Repetindo falha {a} de {b}: {c}":"Retrying failed item {a} of {b}: {c}","Repetição concluída. {n} item(ns) ainda precisam de revisão.":"Retry finished. {n} item(s) still need attention.",
 "Buscando {a} de {b}: {c}":"Searching {a} of {b}: {c}","Cancelando...":"Canceling...","Cancelado: {n} item(ns) prontos para revisar.":"Canceled: {n} item(s) ready to review.","Revise os cartões e clique em Baixar ZIP. {n} item(ns).":"Review the cards and click Download ZIP. {n} item(s).",
