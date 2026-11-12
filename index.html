@@ -431,11 +431,11 @@ async function sagaAssets(collection,query=""){
   try{collectionImages=await tm("/collection/"+collection.id+"/images",{include_image_language:langs()})}catch(e){}
   (collectionImages.backdrops||[]).forEach(x=>backPool.push(x));
   (collectionImages.logos||[]).forEach(x=>logoPool.push(x));
-  for(const movie of parts.slice(0,30)){
-    try{const images=await tm("/movie/"+movie.id+"/images",{include_image_language:langs()});
-      textless(images.backdrops).forEach(x=>backPool.push(x));
-    }catch(e){}
-  }
+  const movieImages=await Promise.all(parts.slice(0,30).map(async movie=>{
+    try{return await tm("/movie/"+movie.id+"/images",{include_image_language:langs()})}
+    catch(e){return null}
+  }));
+  movieImages.filter(Boolean).forEach(images=>textless(images.backdrops).forEach(x=>backPool.push(x)));
   const unique=a=>[...new Map(a.map(x=>[x.file_path,x])).values()];
   const backs=unique(backPool).sort((a,b)=>(b.vote_average||0)-(a.vote_average||0)||(b.vote_count||0)-(a.vote_count||0));
   const logos=unique(goodLogos(logoPool)).sort((a,b)=>lp(a)-lp(b)||(b.vote_average||0)-(a.vote_average||0)||(b.vote_count||0)-(a.vote_count||0));
@@ -645,7 +645,6 @@ document.querySelectorAll("details[data-reset]").forEach(d=>{const b=document.cr
 $("lang").onclick=()=>{lang=lang==="pt"?"en":"pt";try{localStorage.setItem("nuvio_lang",lang)}catch(e){}applyLang()};
 drawPal();drawStyles();sync();applyMode();collect();applyLang();render();
 </script>
-<script src="fixes.js"></script>
-<script src="studio-plus.js?v=1"></script>
+<script src="studio-plus.js?v=2"></script>
 </body>
 </html>

@@ -163,42 +163,74 @@ async function drawItemThumb(it){
   const t=it.canvas.getContext("2d");t.clearRect(0,0,it.canvas.width,it.canvas.height);t.drawImage(cs,0,0,it.canvas.width,it.canvas.height);
 }
 function addCard(it){
-  const card=document.createElement("div");card.className="bcard";
+  const card=document.createElement("div");card.className="bcard";it.card=card;
   const cs=document.createElement("canvas");cs.width=240;cs.height=135;it.canvas=cs;card.appendChild(cs);
   const t=document.createElement("div");t.className="t";t.textContent=it.name+(it.ok?"":" · "+tr("Fallback: usando o fundo atual"));card.appendChild(t);
   const acts=document.createElement("div");acts.className="acts";card.appendChild(acts);
   if(it.backs.length>1){const b=document.createElement("button");b.className="ghost";b.textContent=tr("Outro fundo");
     b.onclick=async()=>{b.disabled=true;try{await setItemBg(it,(it.bi+1)%it.backs.length);await drawItemThumb(it)}catch(e){}b.disabled=false};acts.appendChild(b)}
   const rm=document.createElement("button");rm.className="ghost";rm.textContent=tr("Remover");
-  rm.onclick=()=>{BT.items=BT.items.filter(x=>x!==it);card.remove();if(!BT.items.length)$("bZip").hidden=true};acts.appendChild(rm);
+  rm.onclick=()=>{BT.items=BT.items.filter(x=>x!==it);card.remove();if(!BT.items.length)$("bZip").hidden=true;updateRetryButton()};acts.appendChild(rm);
   $("bGrid").appendChild(card);return drawItemThumb(it);
 }
+function updateRetryButton(){
+  const b=$("bRetryFailed");if(!b)return;
+  const count=BT.items.filter(it=>!it.ok).length;
+  b.hidden=count===0;b.textContent=tr("Repetir falhas ({n})",{n:count});
+}
+async function prepareItem(name){
+  const raw=name.replace(/\\s*\\|\\s*/g,"\\n");
+  const it={name,raw,text:raw,bgImg:o.bg,bgBlob:o.bgBlob,imgEl:o.img,backs:[],bi:0,ok:true};
+  if(!$("bTmdb").checked)return it;
+  try{
+    const r=await tmBest(name.replace(/\\s*\\|\\s*/g," "));
+    it.backs=$("bPick").value==="random"?shuffle(r.backs||[]):bestFirst(r.backs||[]);
+    const needsBackground=$("bCover").checked||$("bHero").checked;
+    if(needsBackground&&!it.backs.length)throw new Error("no-backdrop");
+    if(it.backs.length)await setItemBg(it,0);
+    it.imgEl=r.logos&&r.logos[0]?await blobImg(await tmImg(r.logos[0].file_path,"original")):null;
+    if($("bAutoText").checked)it.text=r.logos&&r.logos.length?"":String(r.text||r.name||raw).replace(/\\s*\\|\\s*/g,"\\n");
+  }catch(e){
+    if(e.message==="cancel")throw e;
+    it.ok=false;it.backs=[];it.bgImg=o.bg;it.bgBlob=o.bgBlob;it.imgEl=o.img;it.text=raw;
+  }
+  return it;
+}
 async function prepare(){
-  const names=$("bText").value.split("\n").map(s=>s.trim()).filter(Boolean).slice(0,40);
+  const names=$("bText").value.split("\\n").map(s=>s.trim()).filter(Boolean).slice(0,40);
   if(!names.length)return bmsg("Escreva um nome por linha.");
   if(!$("bCover").checked&&!$("bLogo").checked&&!$("bHero").checked)return bmsg("Marque pelo menos um tipo de arquivo.");
-  const useTm=$("bTmdb").checked,need=$("bCover").checked||$("bHero").checked;
-  BT.items=[];BT.busy=true;cancelFlag=false;$("bGrid").innerHTML="";$("bZip").hidden=true;$("bPrep").disabled=true;$("bCancel").hidden=false;$("bProgress").value=0;
+  BT.items=[];BT.busy=true;cancelFlag=false;$("bGrid").innerHTML="";$("bZip").hidden=true;$("bPrep").disabled=true;$("bRetryFailed").hidden=true;$("bCancel").hidden=false;$("bProgress").value=0;
   try{
     for(let i=0;i<names.length;i++){
       if(cancelFlag)break;
-      const raw=names[i].replace(/\s*\|\s*/g,"\n");bmsg("Buscando {a} de {b}: {c}",{a:i+1,b:names.length,c:names[i]});
-      const it={name:names[i],raw,text:raw,bgImg:o.bg,bgBlob:o.bgBlob,imgEl:o.img,backs:[],bi:0,ok:true};
-      if(useTm){
-        try{
-          const r=await tmBest(names[i].replace(/\s*\|\s*/g," "));
-          it.backs=$("bPick").value==="random"?shuffle(r.backs||[]):bestFirst(r.backs||[]);
-          if(r.kind==="movie"&&need&&!it.backs.length)throw new Error("no-backdrop");
-          if(it.backs.length)await setItemBg(it,0);
-          it.imgEl=r.logos&&r.logos[0]?await blobImg(await tmImg(r.logos[0].file_path,"original")):null;
-          if($("bAutoText").checked)it.text=r.logos&&r.logos.length?"":String(r.text||r.name||raw).replace(/\s*\|\s*/g,"\n");
-        }catch(e){if(e.message==="cancel")break;it.ok=false;it.backs=[];it.bgImg=o.bg;it.bgBlob=o.bgBlob;it.imgEl=o.img;it.text=raw}
-      }
+      bmsg("Buscando {a} de {b}: {c}",{a:i+1,b:names.length,c:names[i]});
+      const it=await prepareItem(names[i]);
       BT.items.push(it);await addCard(it);$("bProgress").value=Math.round((i+1)/names.length*100);
     }
   }finally{BT.busy=false;$("bPrep").disabled=false;$("bCancel").hidden=true;cancelFlag=false}
-  if(BT.items.length){$("bZip").hidden=false;bmsg(BT.items.length<names.length?"Cancelado: {n} item(ns) prontos para revisar.":"Revise os cartões e clique em Baixar ZIP. {n} item(ns).",{n:BT.items.length})}
+  if(BT.items.length){$("bZip").hidden=false;updateRetryButton();bmsg(BT.items.length<names.length?"Cancelado: {n} item(ns) prontos para revisar.":"Revise os cartões e clique em Baixar ZIP. {n} item(ns).",{n:BT.items.length})}
   else bmsg("Nenhum item para gerar.");
+}
+async function retryFailed(){
+  const failed=BT.items.filter(it=>!it.ok);
+  if(!failed.length)return;
+  BT.busy=true;cancelFlag=false;$("bPrep").disabled=true;$("bRetryFailed").disabled=true;$("bCancel").hidden=false;$("bProgress").value=0;
+  try{
+    for(let i=0;i<failed.length;i++){
+      if(cancelFlag)break;
+      const old=failed[i],index=BT.items.indexOf(old),next=old.card&&old.card.nextSibling;
+      bmsg("Repetindo falha {a} de {b}: {c}",{a:i+1,b:failed.length,c:old.name});
+      const fresh=await prepareItem(old.name);
+      if(index>=0)BT.items[index]=fresh;
+      if(old.card)old.card.remove();
+      await addCard(fresh);
+      if(next)$("bGrid").insertBefore(fresh.card,next);
+      $("bProgress").value=Math.round((i+1)/failed.length*100);
+    }
+  }finally{BT.busy=false;$("bPrep").disabled=false;$("bRetryFailed").disabled=false;$("bCancel").hidden=true;cancelFlag=false}
+  updateRetryButton();
+  bmsg("Repetição concluída. {n} item(ns) ainda precisam de revisão.",{n:BT.items.filter(it=>!it.ok).length});
 }
 async function buildZip(){
   if(!BT.items.length)return bmsg("Nenhum item para gerar.");
@@ -339,10 +371,11 @@ function init(){
   ["bGo","bRetry"].forEach(i=>{const e=$(i);if(e)e.hidden=true});
   const pan=html('<div id="bPlus"><label for="bPick">Escolha do fundo</label><select id="bPick" data-k="bPick"><option value="top">Melhor avaliado</option><option value="random">Aleatório</option></select>'+
     '<div class="row" style="margin-top:8px"><button class="primary" id="bPrep">Buscar e revisar</button><button class="ghost" id="bCancel" hidden>Cancelar</button></div>'+
-    '<div class="bgrid" id="bGrid"></div><button class="primary full" id="bZip" hidden>Baixar ZIP</button></div>');
+    '<button class="ghost full" id="bRetryFailed" hidden>Repetir falhas</button><div class="bgrid" id="bGrid"></div><button class="primary full" id="bZip" hidden>Baixar ZIP</button></div>');
   bBody.insertBefore(pan,$("bmsg"));bindData(pan);adopt(pan);
   $("bPrep").onclick=()=>safe("lote",()=>prepare().catch(e=>bmsg("Algo deu errado no lote. Confira o token do TMDB e tente de novo.")));
   $("bCancel").onclick=()=>{cancelFlag=true;bmsg("Cancelando...")};
+  $("bRetryFailed").onclick=()=>safe("repetir falhas",()=>retryFailed().catch(e=>bmsg("Não foi possível repetir as falhas.")));
   $("bZip").onclick=buildZip;
 
   /* redefinir também limpa a revisão */
@@ -370,7 +403,7 @@ Object.assign(EN,{
 "Grão de filme":"Film grain","Degradê no texto":"Gradient on text","Cor final do degradê":"Gradient end color","Brilho neon no texto":"Neon glow on text","Sombra do assunto recortado":"Cutout shadow","Moldura":"Frame","Cor da moldura":"Frame color",
 "Cores a partir da imagem":"Colors from the image","Aplicar ao escolher um fundo":"Apply when choosing a background","Escolha uma imagem de fundo primeiro.":"Choose a background image first.","Cores aplicadas a partir da imagem.":"Colors applied from the image.",
 "Desfazer":"Undo","Refazer":"Redo","Zona segura da TV":"TV safe zone","Pré-visualização. Use as setas para mover o título.":"Preview. Use the arrow keys to move the title.",
-"Escolha do fundo":"Background choice","Melhor avaliado":"Top rated","Aleatório":"Random","Buscar e revisar":"Search and review","Cancelar":"Cancel","Baixar ZIP":"Download ZIP","Outro fundo":"Another background","Remover":"Remove",
+"Escolha do fundo":"Background choice","Melhor avaliado":"Top rated","Aleatório":"Random","Buscar e revisar":"Search and review","Cancelar":"Cancel","Baixar ZIP":"Download ZIP","Outro fundo":"Another background","Remover":"Remove","Repetir falhas ({n})":"Retry failed ({n})","Repetindo falha {a} de {b}: {c}":"Retrying failed item {a} of {b}: {c}","Repetição concluída. {n} item(ns) ainda precisam de revisão.":"Retry finished. {n} item(s) still need attention.",
 "Buscando {a} de {b}: {c}":"Searching {a} of {b}: {c}","Cancelando...":"Canceling...","Cancelado: {n} item(ns) prontos para revisar.":"Canceled: {n} item(s) ready to review.","Revise os cartões e clique em Baixar ZIP. {n} item(ns).":"Review the cards and click Download ZIP. {n} item(s).",
 "Nenhum item para gerar.":"No items to generate.","Fallback: usando o fundo atual":"Fallback: using the current background","Gerando arquivos {a} de {b}...":"Creating files {a} of {b}...","ZIP gerado: {n} itens.":"ZIP created: {n} items.",
 "Estilo aplicado: {n}":"Style applied: {n}","Seção redefinida.":"Section reset.","Redefinir esta seção":"Reset this section",
