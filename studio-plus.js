@@ -244,7 +244,8 @@ async function prepare(){
     for(let i=0;i<names.length;i++){
       if(cancelFlag)break;
       bmsg("Buscando {a} de {b}: {c}",{a:i+1,b:names.length,c:names[i]});
-      const it=await prepareItem(names[i]);
+      let it;
+      try{it=await prepareItem(names[i])}catch(e){if(e.message==="cancel")break;throw e}
       BT.items.push(it);await addCard(it);$("bProgress").value=Math.round((i+1)/names.length*100);
     }
   }finally{BT.busy=false;$("bPrep").disabled=false;$("bCancel").hidden=true;cancelFlag=false}
@@ -260,7 +261,8 @@ async function retryFailed(){
       if(cancelFlag)break;
       const old=failed[i],index=BT.items.indexOf(old),next=old.card&&old.card.nextSibling;
       bmsg("Repetindo falha {a} de {b}: {c}",{a:i+1,b:failed.length,c:old.name});
-      const fresh=await prepareItem(old.name);
+      let fresh;
+      try{fresh=await prepareItem(old.name)}catch(e){if(e.message==="cancel")break;throw e}
       if(index>=0)BT.items[index]=fresh;
       if(old.card)old.card.remove();
       await addCard(fresh);
@@ -275,6 +277,7 @@ async function buildZip(){
   if(!BT.items.length)return bmsg("Nenhum item para gerar.");
   if(typeof JSZip==="undefined")return bmsg("Não foi possível carregar o módulo de ZIP.");
   const outs=[["cover",$("bCover").checked],["logo",$("bLogo").checked],["hero",$("bHero").checked]].filter(x=>x[1]).map(x=>x[0]);
+  if(!outs.length)return bmsg("Marque pelo menos um tipo de arquivo.");
   const z=new JSZip();$("bZip").disabled=true;
   try{
     for(let i=0;i<BT.items.length;i++){
