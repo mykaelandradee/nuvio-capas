@@ -218,17 +218,17 @@ function updateRetryButton(){
   b.hidden=count===0;b.textContent=tr("Repetir falhas ({n})",{n:count});
 }
 async function prepareItem(name){
-  const raw=name.replace(/\\s*\\|\\s*/g,"\\n");
+  const raw=name.replace(/\s*\|\s*/g,"\n");
   const it={name,raw,text:raw,bgImg:o.bg,bgBlob:o.bgBlob,imgEl:o.img,backs:[],bi:0,ok:true};
   if(!$("bTmdb").checked)return it;
   try{
-    const r=await tmBest(name.replace(/\\s*\\|\\s*/g," "));
+    const r=await tmBest(name.replace(/\s*\|\s*/g," "));
     it.backs=$("bPick").value==="random"?shuffle(r.backs||[]):bestFirst(r.backs||[]);
     const needsBackground=$("bCover").checked||$("bHero").checked;
     if(needsBackground&&!it.backs.length)throw new Error("no-backdrop");
     if(it.backs.length)await setItemBg(it,0);
     it.imgEl=r.logos&&r.logos[0]?await blobImg(await tmImg(r.logos[0].file_path,"original")):null;
-    if($("bAutoText").checked)it.text=r.logos&&r.logos.length?"":String(r.text||r.name||raw).replace(/\\s*\\|\\s*/g,"\\n");
+    if($("bAutoText").checked)it.text=r.logos&&r.logos.length?"":String(r.text||r.name||raw).replace(/\s*\|\s*/g,"\n");
   }catch(e){
     if(e.message==="cancel")throw e;
     it.ok=false;it.backs=[];it.bgImg=o.bg;it.bgBlob=o.bgBlob;it.imgEl=o.img;it.text=raw;
@@ -236,7 +236,7 @@ async function prepareItem(name){
   return it;
 }
 async function prepare(){
-  const names=$("bText").value.split("\\n").map(s=>s.trim()).filter(Boolean).slice(0,40);
+  const names=$("bText").value.split("\n").map(s=>s.trim()).filter(Boolean).slice(0,40);
   if(!names.length)return bmsg("Escreva um nome por linha.");
   if(!$("bCover").checked&&!$("bLogo").checked&&!$("bHero").checked)return bmsg("Marque pelo menos um tipo de arquivo.");
   BT.items=[];BT.busy=true;cancelFlag=false;$("bGrid").innerHTML="";$("bZip").hidden=true;$("bPrep").disabled=true;$("bRetryFailed").hidden=true;$("bCancel").hidden=false;$("bProgress").value=0;
