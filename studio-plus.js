@@ -111,11 +111,13 @@ function autoCompose(){
   const c=sample.getContext("2d",{willReadFrequently:true});
   try{c.drawImage(o.bg,0,0,sample.width,sample.height)}catch(e){return msg("Não foi possível analisar esta imagem.")};
   const px=c.getImageData(0,0,sample.width,sample.height).data;
-  const regions=[
-    {layout:"center",x0:12,y0:12,x1:84,y1:42},
-    {layout:"bottom",x0:8,y0:34,x1:84,y1:52},
-    {layout:"band",x0:8,y0:17,x1:88,y1:37}
-  ];
+  const regions=o.mode==="hero"
+    ?[{layout:"bottom",x0:8,y0:34,x1:84,y1:52}]
+    :[
+      {layout:"center",x0:12,y0:12,x1:84,y1:42},
+      {layout:"bottom",x0:8,y0:34,x1:84,y1:52},
+      {layout:"band",x0:8,y0:17,x1:88,y1:37}
+    ];
   const stats=regions.map(r=>{
     let sum=0,edges=0,n=0;
     const lumAt=(x,y)=>{const i=(y*sample.width+x)*4;return .2126*px[i]+.7152*px[i+1]+.0722*px[i+2]};
@@ -451,7 +453,7 @@ function init(){
   if(typeof setBg==="function"){const _sb=setBg;window.setBg=function(im,b){_sb(im,b);if(o.autoPal)applyPal()}}
 
   /* idioma e restauração */
-  adopt(pst);adopt(fx2);adopt(ur);adopt(sz);
+  adopt(pst);adopt(fx2);adopt(ur);adopt(sz);adopt(compare);
   safe("cfg salvo",()=>{applyCfg(JSON.parse(localStorage.getItem("nuvio_cfg")||"null"))});
   sync();applyMode();applyLang();updUndo();
 }
