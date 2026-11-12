@@ -344,7 +344,7 @@ function init(){
   if(tit)tit.insertAdjacentElement("beforebegin",pst);
   const autoBtn=html('<button class="ghost full" id="autoCompose" data-m="cover hero">Ajustar composição automaticamente</button>');
   pst.querySelector(".body").appendChild(autoBtn);
-  autoBtn.querySelector("#autoCompose").onclick=autoCompose;
+  autoBtn.onclick=autoCompose;
 
   /* efeitos */
   const cores=document.querySelector('details[data-reset^="c1,"]');
