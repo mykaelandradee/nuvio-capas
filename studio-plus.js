@@ -334,6 +334,7 @@ function init(){
     "#pstGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}"+
     ".bgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px}.bcard{border:1px solid var(--line);border-radius:12px;padding:6px;background:var(--chip)}"+
     ".bcard canvas{width:100%;height:auto;border-radius:8px;display:block;box-shadow:none;max-height:none}.bcard .t{font-size:12px;font-weight:600;margin:4px 0;word-break:break-word}.bcard .acts{display:flex;gap:4px;flex-wrap:wrap}"+
+    ".batch-options{display:flex;flex-direction:column;gap:8px}.batch-options>.msg{margin:0}.batch-output-title{margin:8px 0 0}.batch-outputs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.batch-outputs .chk{margin:4px 0;font-size:12px}.batch-progress{margin-top:12px}.batch-progress label{margin:0 0 6px}.batch-progress progress{width:100%;height:8px}.bgrid:empty{display:none}@media(max-width:420px){.batch-outputs{grid-template-columns:1fr 1fr}}"+
     "#guide{position:absolute;border:2px dashed #ffd27a;border-radius:6px;pointer-events:none;box-shadow:0 0 0 1px #0008}button:disabled{opacity:.45;cursor:default}";
   document.head.appendChild(css);
 
@@ -432,11 +433,33 @@ function init(){
   /* lote com revisão */
   const bd=$("bText").closest("details"),bBody=bd.querySelector(".body");
   ["bGo","bRetry"].forEach(i=>{const e=$(i);if(e)e.hidden=true});
-  const pan=html('<div id="bPlus"><label for="bPick">Escolha do fundo</label><select id="bPick" data-k="bPick"><option value="top">Melhor avaliado</option><option value="random">Aleatório</option></select>'+
-    '<div class="row" style="margin-top:8px"><button class="primary" id="bPrep">Buscar e revisar</button><button class="ghost" id="bCancel" hidden>Cancelar</button></div>'+
-    '<button class="ghost full" id="bRetryFailed" hidden>Repetir falhas</button><div class="bgrid" id="bGrid"></div><button class="primary full" id="bZip" hidden>Baixar ZIP</button></div>');
-  bBody.insertBefore(pan,$("bmsg"));bindData(pan);adopt(pan);
-  $("bPrep").onclick=()=>safe("lote",()=>prepare().catch(e=>bmsg("Algo deu errado no lote. Confira o token do TMDB e tente de novo.")));
+  const pan=html('<div id="bPlus"><div class="batch-pick"><label for="bPick">Escolha do fundo</label><select id="bPick" data-k="bPick"><option value="top">Melhor avaliado</option><option value="random">Aleatório</option></select></div>'+
+    '<div class="row" style="margin-top:8px"><button class="primary" id="bPrep">Preparar prévias</button><button class="ghost" id="bCancel" hidden>Cancelar</button></div>'+
+    '<button class="ghost full" id="bRetryFailed" hidden>Repetir falhas</button><div class="batch-progress"><label for="bProgress">Progresso</label></div><div class="bgrid" id="bGrid"></div><button class="primary full" id="bZip" hidden>Baixar ZIP</button></div>');
+  const batchTextLabel=html('<label for="bText">Coleções (uma por linha)</label>');
+  const outputTitle=html('<label class="batch-output-title">Arquivos para gerar</label>');
+  const outputWrap=html('<div class="batch-outputs"></div>');
+  ["bCover","bLogo","bHero"].forEach(id=>{const el=$(id);if(el)outputWrap.appendChild(el.closest("label"))});
+  const tmdbLabel=$("bTmdb").closest("label"),autoTextLabel=$("bAutoText").closest("label");
+  const help=[...bBody.querySelectorAll(":scope > .msg")];
+  if(help[0])help[0].textContent="Informe uma coleção por linha. Todos os itens usam as configurações atuais do editor.";
+  if(help[1])help[1].textContent="Para sagas, prioriza a identidade da franquia e imagens dos filmes relacionados. Pessoas usam retratos; estúdios usam logos oficiais.";
+  pan.querySelector(".batch-progress").appendChild($("bProgress"));
+  const status=$("bmsg");
+  const legacyItems=$("bItems"),legacyRetry=$("bRetry"),legacyGo=$("bGo"),legacyReset=$("restoreDefaults");
+  [legacyItems,legacyRetry,legacyGo,legacyReset].forEach(el=>{if(el)el.hidden=true});
+  const batchOptions=html('<div class="batch-options"></div>');
+  batchOptions.append(batchTextLabel,$("bText"));
+  if(help[0])batchOptions.appendChild(help[0]);
+  batchOptions.appendChild(tmdbLabel);
+  if(help[1])batchOptions.appendChild(help[1]);
+  batchOptions.append(autoTextLabel,outputTitle,outputWrap,pan);
+  bBody.replaceChildren(batchOptions);
+  pan.appendChild(status);
+  bindData(pan);adopt(batchOptions);adopt(pan);
+  const syncBatchOptions=()=>{const enabled=$("bTmdb").checked;pan.querySelector(".batch-pick").hidden=!enabled;autoTextLabel.hidden=!enabled};
+  $("bTmdb").addEventListener("change",syncBatchOptions);syncBatchOptions();
+  $("bPrep").onclick=()=>safe("lote",()=>prepare().catch(e=>bmsg(e.message==="cancel"?"Geração cancelada.":"Algo deu errado no lote. Confira o token do TMDB e tente de novo.")));
   $("bCancel").onclick=()=>{cancelFlag=true;bmsg("Cancelando...")};
   $("bRetryFailed").onclick=()=>safe("repetir falhas",()=>retryFailed().catch(e=>bmsg("Não foi possível repetir as falhas.")));
   $("bZip").onclick=buildZip;
@@ -452,6 +475,16 @@ function init(){
   /* cores automáticas ao escolher um fundo */
   if(typeof setBg==="function"){const _sb=setBg;window.setBg=function(im,b){_sb(im,b);if(o.autoPal)applyPal()}}
 
+  /* ordem das opções: descoberta, criação, acabamento e exportação */
+  const panel=document.querySelector(".panel");
+  if(panel){
+    const preferred=["Como usar","Buscar no TMDB","Estilos prontos","Título: texto e logo","Formato","Fundo","Cores e degradê","Efeitos","Profundidade","Estilos salvos","Coleção em lote","Exportação"];
+    const sections=[...panel.querySelectorAll(":scope > details")];
+    const ordered=preferred.map(name=>sections.find(d=>d.querySelector("summary")?.textContent.trim()===name)).filter(Boolean);
+    sections.filter(d=>!ordered.includes(d)).forEach(d=>ordered.push(d));
+    ordered.forEach(d=>panel.appendChild(d));
+  }
+
   /* idioma e restauração */
   adopt(pst);adopt(fx2);adopt(ur);adopt(sz);adopt(compare);
   safe("cfg salvo",()=>{applyCfg(JSON.parse(localStorage.getItem("nuvio_cfg")||"null"))});
@@ -460,7 +493,7 @@ function init(){
 
 /* ============ 7. traduções ============ */
 Object.assign(EN,{
-"Estilos prontos":"Style presets","Aplica fontes, cores e efeitos de uma vez. O texto e as imagens não mudam.":"Applies fonts, colors and effects at once. Text and images stay as they are.",
+"Coleções (uma por linha)":"Collections (one per line)","Informe uma coleção por linha. Todos os itens usam as configurações atuais do editor.":"Enter one collection per line. All items use the editor's current settings.","Para sagas, prioriza a identidade da franquia e imagens dos filmes relacionados. Pessoas usam retratos; estúdios usam logos oficiais.":"For collections, prioritize franchise identity and artwork from related films. People use portraits; studios use official logos.","Arquivos para gerar":"Files to create","Preparar prévias":"Prepare previews","Progresso":"Progress","Estilos prontos":"Style presets","Aplica fontes, cores e efeitos de uma vez. O texto e as imagens não mudam.":"Applies fonts, colors and effects at once. Text and images stay as they are.",
 "Impacto":"Impact","Editorial":"Editorial","Streaming":"Streaming","Tech":"Tech","Sport":"Sport","Clean":"Clean","Pop":"Pop","Premium":"Premium","Cinema":"Cinema","Vidro":"Glass","Neon":"Neon","Ouro":"Gold","Minimalista":"Minimal","Retrô":"Retro","Sombrio":"Dark","Pôster":"Poster",
 "Efeitos":"Effects","Cartão de vidro atrás do título":"Glass card behind the title","Desfoque do vidro":"Glass blur","Brilho do vidro":"Glass brightness","Cantos arredondados":"Rounded corners","Margem do cartão":"Card padding",
 "Grão de filme":"Film grain","Degradê no texto":"Gradient on text","Cor final do degradê":"Gradient end color","Brilho neon no texto":"Neon glow on text","Sombra do assunto recortado":"Cutout shadow","Moldura":"Frame","Cor da moldura":"Frame color",
