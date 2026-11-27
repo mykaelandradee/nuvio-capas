@@ -124,7 +124,7 @@ input[type=color]{width:100%;height:42px;border:0;border-radius:12px;background:
       <div style="display:flex;gap:14px;margin:8px 0"><label><input id="hcText" type="checkbox" checked> Exibir título</label><label><input id="hcDark" type="checkbox" checked> Escurecer fundo</label></div>
       <div class="hc-preview"><canvas id="hcCanvas" width="960" height="540"></canvas></div>
       <p class="hc-note" id="hcCount">Aguardando geração · Prévia 16:9</p>
-      <div class="hc-actions"><button class="ghost" id="hcPreview">Gerar prévia</button><button class="primary" id="hcSave">Baixar PNG</button></div>
+      <div class="hc-actions"><button class="ghost" id="hcPreview">Gerar prévia</button></div>
       <div class="hc-actions"><button class="ghost" id="hcBatch">Gerar lote ZIP</button><button class="ghost" id="hcCancel" hidden>Cancelar</button></div>
       <progress id="hcProgress" value="0" max="100"></progress>
       <p class="hc-status" id="hcStatus">Informe o token TMDB na seção Buscar no TMDB.</p>
@@ -673,6 +673,6 @@ $("lang").onclick=()=>{lang=lang==="pt"?"en":"pt";try{localStorage.setItem("nuvi
 drawPal();drawStyles();sync();applyMode();collect();applyLang();render();
 </script>
 <script src="studio-plus.js?v=2"></script>
-<script src="hero-collections.js?v=8"></script>
+<script src="hero-collections.js?v=9"></script>
 </body>
 </html>
