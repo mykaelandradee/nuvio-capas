@@ -449,9 +449,7 @@ function init(){
   if(help[1])help[1].textContent="Para sagas, prioriza a identidade da franquia e imagens dos filmes relacionados. Pessoas usam retratos; estúdios usam logos oficiais.";
   pan.querySelector(".batch-progress").appendChild($("bProgress"));
   const status=$("bmsg");
-  const legacyItems=$("bItems"),legacyRetry=$("bRetry"),legacyGo=$("bGo"),legacyReset=$("restoreDefaults");
-  [legacyItems,legacyRetry,legacyGo,legacyReset].forEach(el=>{if(el)el.hidden=true});
-  const batchOptions=html('<div class="batch-options"></div>');
+    const batchOptions=html('<div class="batch-options"></div>');
   batchOptions.append(batchTextLabel,$("bText"));
   if(help[0])batchOptions.appendChild(help[0]);
   batchOptions.appendChild(tmdbLabel);
@@ -472,7 +470,6 @@ function init(){
     const _rd=restoreDefaults;
     window.restoreDefaults=function(){_rd();BT.items=[];$("bGrid").innerHTML="";$("bZip").hidden=true;cancelFlag=false;updGuide()};
     $("resetTop").onclick=()=>{if(window.confirm(tr("Restaurar todas as configurações e remover as imagens atuais?")))window.restoreDefaults()};
-    $("restoreDefaults").onclick=()=>{if(window.confirm(tr("Restaurar configurações, opções do lote e remover as imagens atuais?")))window.restoreDefaults()};
   }
 
   /* cores automáticas ao escolher um fundo */
