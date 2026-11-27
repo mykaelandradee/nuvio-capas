@@ -29,7 +29,7 @@ const popular=(a,b)=>(b.popularity||0)-(a.popularity||0)||(b.vote_count||0)-(a.v
 const label=()=>$("hcTarget").selectedOptions[0]?.textContent||"Coleção",say=t=>$("hcStatus").textContent=t;
 async function loadOptions(){const t=$("hcType").value,m=$("hcMedia").value==="tv"?"tv":"movie",s=$("hcTarget");s.innerHTML="";s.add(new Option("Carregando opções…",""));say("Conectando ao TMDB para carregar as categorias…");
 if(t==="genre"){const genres={movie:[[28,"Ação"],[12,"Aventura"],[16,"Animação"],[35,"Comédia"],[80,"Crime"],[99,"Documentário"],[18,"Drama"],[10751,"Família"],[14,"Fantasia"],[36,"História"],[27,"Terror"],[10402,"Música"],[9648,"Mistério"],[10749,"Romance"],[878,"Ficção científica"],[10770,"Cinema TV"],[53,"Thriller"],[10752,"Guerra"],[37,"Faroeste"]],tv:[[10759,"Ação e aventura"],[16,"Animação"],[35,"Comédia"],[80,"Crime"],[99,"Documentário"],[18,"Drama"],[10751,"Família"],[10762,"Infantil"],[9648,"Mistério"],[10763,"Notícias"],[10764,"Reality"],[10765,"Ficção científica e fantasia"],[10766,"Novela"],[10767,"Talk show"],[10768,"Guerra e política"],[37,"Faroeste"]]};(genres[m]||genres.movie).forEach(x=>s.add(new Option(x[1],x[0])));s.add(new Option("Todos os gêneros","all"))}
-else if(t==="year"){for(let y=new Date().getFullYear();y>=new Date().getFullYear()-29;y--)s.add(new Option(String(y),String(y)));s.add(new Option("Todos os anos (últimos 30)","all"))}
+else if(t==="year"){for(let y=2020;y>=1950;y-=10)s.add(new Option(y+"–"+(y+9),String(y)));s.add(new Option("Todas as décadas","all"))}
 else if(t==="provider"){const d=await tm("/watch/providers/"+m,{watch_region:"BR",language:"pt-BR"});(d.results||[]).sort((a,b)=>(a.display_priority||999)-(b.display_priority||999)).forEach(x=>s.add(new Option(x.provider_name,x.provider_id)));s.add(new Option("Todos os streamings","all"))}
 else s.add(new Option("Lista personalizada","custom"));
 $("hcCustomWrap").hidden=t!=="custom";$("hcScope").disabled=t==="custom";s.selectedIndex=0;if(!$("hcTitle").dataset.edited)$("hcTitle").value=label();say((s.options.length-1)+" opções carregadas.")}
@@ -44,7 +44,7 @@ const lists=await Promise.all(media.map(async m=>{
   const requests=Array.from({length:pages},async(_,i)=>{
     const p={language:"pt-BR",sort_by:"popularity.desc",include_adult:false,"vote_count.gte":35,page:i+1};
     if(type==="genre"&&value!=="all")p.with_genres=m==="tv"&&$("hcMedia").value==="both"?tvGenreMap[value]:value;
-    if(type==="year"&&value!=="all")p[m==="movie"?"primary_release_year":"first_air_date_year"]=value;
+    if(type==="year"&&value!=="all"){const decade=Number(value),start=decade+"-01-01",end=(decade+9)+"-12-31";p[m==="movie"?"primary_release_date.gte":"first_air_date.gte"]=start;p[m==="movie"?"primary_release_date.lte":"first_air_date.lte"]=end;}
     if(type==="provider"){p.watch_region="BR";p.with_watch_monetization_types="flatrate|free|ads";if(value!=="all")p.with_watch_providers=value}
     const d=await tm("/discover/"+m,p);
     return(d.results||[]).map(x=>({...x,media_type:m}));
