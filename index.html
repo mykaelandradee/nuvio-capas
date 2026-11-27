@@ -105,6 +105,33 @@ input[type=color]{width:100%;height:42px;border:0;border-radius:12px;background:
 </section>
 
 <aside class="panel">
+  <details id="hcPanel" open>
+    <summary>Hero de Coleções <span style="font-size:11px;color:var(--accent)">NOVO</span></summary>
+    <div class="body">
+      <p class="hc-note">Crie fundos cinematográficos com vários filmes ou séries. Gere uma arte individual ou um pacote de categorias em lote.</p>
+      <div class="hc-grid">
+        <div><label for="hcType">Tipo de coleção</label><select id="hcType"><option value="genre">Gênero</option><option value="year">Ano</option><option value="provider">Streaming</option><option value="custom">Personalizado</option></select></div>
+        <div><label for="hcMedia">Conteúdo</label><select id="hcMedia"><option value="movie">Filmes</option><option value="tv">Séries</option><option value="both">Filmes e séries</option></select></div>
+        <div class="hc-full"><label for="hcTarget">Categoria</label><select id="hcTarget"><option value="">Carregando opções…</option></select></div>
+        <div><label for="hcCount">Títulos na arte</label><select id="hcCount"><option>6</option><option selected>8</option><option>10</option><option>12</option></select></div>
+        <div><label for="hcStyle">Estilo</label><select id="hcStyle"><option value="diagonal">Mural inclinado</option><option value="mosaic">Mosaico</option><option value="strips">Faixas dinâmicas</option></select></div>
+        <div><label for="hcRes">Resolução</label><select id="hcRes"><option value="1920">Full HD · 1920 × 1080</option><option value="3840">4K · 3840 × 2160</option></select></div>
+        <div class="hc-full"><label for="hcTitle">Título principal</label><input id="hcTitle" maxlength="60" placeholder="Ex.: AÇÃO"></div>
+        <div class="hc-full"><label for="hcSubtitle">Subtítulo</label><input id="hcSubtitle" maxlength="90" placeholder="Os melhores filmes e séries"></div>
+        <div class="hc-full"><label for="hcScope">Lote</label><select id="hcScope"><option value="one">Somente categoria selecionada</option><option value="all">Todas as opções disponíveis (até 30)</option></select></div>
+      </div>
+      <div id="hcCustomWrap" hidden><label for="hcCustom">Títulos (um por linha)</label><textarea id="hcCustom" rows="4" placeholder="Duna&#10;Interestelar&#10;Blade Runner 2049"></textarea></div>
+      <div style="display:flex;gap:14px;margin:8px 0"><label><input id="hcText" type="checkbox" checked> Exibir título</label><label><input id="hcDark" type="checkbox" checked> Escurecer fundo</label></div>
+      <div class="hc-preview"><canvas id="hcCanvas" width="960" height="540"></canvas></div>
+      <p class="hc-note" id="hcCount">Aguardando geração · Prévia 16:9</p>
+      <div class="hc-actions"><button class="ghost" id="hcPreview">Gerar prévia</button><button class="primary" id="hcSave">Baixar PNG</button></div>
+      <div class="hc-actions"><button class="ghost" id="hcBatch">Gerar lote ZIP</button><button class="ghost" id="hcCancel" hidden>Cancelar</button></div>
+      <progress id="hcProgress" value="0" max="100"></progress>
+      <p class="hc-status" id="hcStatus">Informe o token TMDB na seção Buscar no TMDB.</p>
+      <div class="hc-items" id="hcItems"></div>
+      <p class="hc-note">A composição é feita no navegador. As imagens são fornecidas pelo TMDB; o token permanece neste navegador.</p>
+    </div>
+  </details>
   <details><summary>Como usar</summary><div class="body"><ol class="how">
     <li>Escolha o que gerar: capa da pasta, logo ou fundo do hero.</li>
     <li>Busque um filme, série ou saga no TMDB (ou envie sua imagem).</li>
