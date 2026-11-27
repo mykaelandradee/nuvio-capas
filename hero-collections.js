@@ -16,7 +16,7 @@ field("Estilo",'<select id="hcStyle"><option value="diagonal">Mural inclinado</o
 field("Resolução",'<select id="hcRes"><option value="1920">Full HD · 1920 × 1080</option><option value="3840">4K · 3840 × 2160</option></select>')+
 field("Título principal",'<input id="hcTitle" maxlength="60" placeholder="Ex.: AÇÃO">',true)+
 field("Subtítulo",'<input id="hcSubtitle" maxlength="90" placeholder="Os melhores filmes e séries">',true)+
-field("Lote",'<select id="hcScope"><option value="one">Somente categoria selecionada</option><option value="all">Todas as categorias disponíveis</option></select>',true)+'</div>'+
+field("Lote",'<select id="hcScope"><option value="one">Somente categoria selecionada</option><option value="all">Todas as opções disponíveis (até 30)</option></select>',true)+'</div>'+
 '<div id="hcCustomWrap" hidden><label for="hcCustom">Títulos (um por linha)</label><textarea id="hcCustom" rows="4" placeholder="Duna&#10;Interestelar&#10;Blade Runner 2049"></textarea></div>'+
 '<div style="display:flex;gap:14px;margin:8px 0"><label><input id="hcText" type="checkbox" checked> Exibir título</label><label><input id="hcDark" type="checkbox" checked> Escurecer fundo</label></div>'+
 '<div class="hc-preview"><canvas id="hcCanvas" width="960" height="540"></canvas></div><p class="hc-note" id="hcCount">Aguardando geração · Prévia 16:9</p>'+
@@ -30,7 +30,7 @@ const popular=(a,b)=>(b.popularity||0)-(a.popularity||0)||(b.vote_count||0)-(a.v
 const label=()=>$("hcTarget").selectedOptions[0]?.textContent||"Coleção",say=t=>$("hcStatus").textContent=t;
 async function loadOptions(){const t=$("hcType").value,m=$("hcMedia").value==="tv"?"tv":"movie",s=$("hcTarget");s.innerHTML="";
 if(t==="genre"){const d=await tm("/genre/"+m+"/list",{language:"pt-BR"});(d.genres||[]).forEach(x=>s.add(new Option(x.name,x.id)));s.add(new Option("Todos os gêneros","all"))}
-else if(t==="year"){for(let y=new Date().getFullYear();y>=1970;y--)s.add(new Option(String(y),String(y)));s.add(new Option("Últimos 10 anos","all"))}
+else if(t==="year"){for(let y=new Date().getFullYear();y>=new Date().getFullYear()-29;y--)s.add(new Option(String(y),String(y)));s.add(new Option("Todos os anos (últimos 30)","all"))}
 else if(t==="provider"){const d=await tm("/watch/providers/"+m,{watch_region:"BR",language:"pt-BR"});(d.results||[]).sort((a,b)=>(a.display_priority||999)-(b.display_priority||999)).forEach(x=>s.add(new Option(x.provider_name,x.provider_id)));s.add(new Option("Todos os streamings","all"))}
 else s.add(new Option("Lista personalizada","custom"));
 $("hcCustomWrap").hidden=t!=="custom";$("hcScope").disabled=t==="custom";s.selectedIndex=0;if(!$("hcTitle").dataset.edited)$("hcTitle").value=label()}
