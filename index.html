@@ -112,7 +112,7 @@ input[type=color]{width:100%;height:42px;border:0;border-radius:12px;background:
       <div class="hc-grid">
         <div><label for="hcType">Tipo de coleção</label><select id="hcType"><option value="genre">Gênero</option><option value="year">Ano</option><option value="provider">Streaming</option><option value="custom">Personalizado</option></select></div>
         <div><label for="hcMedia">Conteúdo</label><select id="hcMedia"><option value="movie">Filmes</option><option value="tv">Séries</option><option value="both">Filmes e séries</option></select></div>
-        <div class="hc-full"><label for="hcTarget">Categoria</label><select id="hcTarget"><option value="">Carregando opções…</option></select></div>
+        <div class="hc-full"><label for="hcTarget">Categoria</label><select id="hcTarget"><option value="28">Ação</option><option value="12">Aventura</option><option value="16">Animação</option><option value="35">Comédia</option><option value="80">Crime</option><option value="99">Documentário</option><option value="18">Drama</option><option value="10751">Família</option><option value="14">Fantasia</option><option value="36">História</option><option value="27">Terror</option><option value="10402">Música</option><option value="9648">Mistério</option><option value="10749">Romance</option><option value="878">Ficção científica</option><option value="10770">Cinema TV</option><option value="53">Thriller</option><option value="10752">Guerra</option><option value="37">Faroeste</option><option value="all">Todos os gêneros</option></select></div>
         <div><label for="hcNumTitles">Títulos na arte</label><select id="hcNumTitles"><option>5</option><option selected>10</option><option>15</option><option>20</option><option>25</option><option>30</option></select></div>
         <div><label for="hcStyle">Estilo</label><select id="hcStyle"><option value="diagonal">Mural inclinado</option><option value="mosaic">Mosaico</option><option value="strips">Faixas dinâmicas</option></select></div>
         <div><label for="hcRes">Resolução</label><select id="hcRes"><option value="1920">Full HD · 1920 × 1080</option><option value="3840">4K · 3840 × 2160</option></select></div>
@@ -673,6 +673,6 @@ $("lang").onclick=()=>{lang=lang==="pt"?"en":"pt";try{localStorage.setItem("nuvi
 drawPal();drawStyles();sync();applyMode();collect();applyLang();render();
 </script>
 <script src="studio-plus.js?v=2"></script>
-<script src="hero-collections.js?v=6"></script>
+<script src="hero-collections.js?v=7"></script>
 </body>
 </html>
