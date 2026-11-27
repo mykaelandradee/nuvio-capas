@@ -19,7 +19,7 @@ field("Subtítulo",'<input id="hcSubtitle" maxlength="90" placeholder="Os melhor
 field("Lote",'<select id="hcScope"><option value="one">Somente categoria selecionada</option><option value="all">Todas as opções disponíveis (até 30)</option></select>',true)+'</div>'+
 '<div id="hcCustomWrap" hidden><label for="hcCustom">Títulos (um por linha)</label><textarea id="hcCustom" rows="4" placeholder="Duna&#10;Interestelar&#10;Blade Runner 2049"></textarea></div>'+
 '<div style="display:flex;gap:14px;margin:8px 0"><label><input id="hcText" type="checkbox" checked> Exibir título</label><label><input id="hcDark" type="checkbox" checked> Escurecer fundo</label></div>'+
-'<div class="hc-preview"><canvas id="hcCanvas" width="960" height="540"></canvas></div><p class="hc-note" id="hcNumTitles">Aguardando geração · Prévia 16:9</p>'+
+'<div class="hc-preview"><canvas id="hcCanvas" width="960" height="540"></canvas></div><p class="hc-note" id="hcCount">Aguardando geração · Prévia 16:9</p>'+
 '<div class="hc-actions"><button class="ghost" id="hcPreview">Gerar prévia</button><button class="primary" id="hcSave">Baixar PNG</button></div>'+
 '<div class="hc-actions"><button class="ghost" id="hcBatch">Gerar lote ZIP</button><button class="ghost" id="hcCancel" hidden>Cancelar</button></div><progress id="hcProgress" value="0" max="100"></progress><p class="hc-status" id="hcStatus">Informe o token TMDB na seção Buscar no TMDB.</p><div class="hc-items" id="hcItems"></div>'+
 '<p class="hc-note">Composição feita localmente no navegador. As imagens são fornecidas pelo TMDB; o token permanece no armazenamento local.</p></div>';
@@ -40,19 +40,41 @@ async function images(items){return(await Promise.all(items.filter(x=>x.backdrop
 function paint(cv,imgs,title){
 const W=+$("hcRes").value,H=W*9/16,sc=W/1920,c=cv.getContext("2d"),style=$("hcStyle").value,n=imgs.length;
 cv.width=W;cv.height=H;c.fillStyle="#070910";c.fillRect(0,0,W,H);
-const cols=Math.ceil(Math.sqrt(n*W/H)),rows=Math.ceil(n/cols),cellW=W/cols,cellH=H/rows,gap=style==="mosaic"?0:Math.max(5,10*sc);
-const ps=imgs.map((p,i)=>{const row=Math.floor(i/cols),col=i%cols;
-let w=cellW+(style==="mosaic"?0:gap*2),h=cellH+(style==="mosaic"?0:gap*2);
-let x=col*cellW+(style==="mosaic"?0:-gap),y=row*cellH+(style==="mosaic"?0:-gap),a=0;
-if(style==="diagonal"){x+=(row%2?cellW*.08:-cellW*.04);y+=(col%2?cellH*.025:-cellH*.025);a=(col%2?-.035:.035)+(row%2?-.012:.012);w*=1.12;h*=1.10}
-else if(style==="strips"){h*=.82;y+=cellH*.09;a=(row%2?-.012:.012)}
-return{p,x,y,w,h,a}});
-ps.forEach(p=>{const im=p.p.im;c.save();c.translate(p.x+p.w/2,p.y+p.h/2);c.rotate(p.a);const z=Math.max(p.w/im.width,p.h/im.height),dw=im.width*z,dh=im.height*z;c.beginPath();c.roundRect(-p.w/2,-p.h/2,p.w,p.h,style==="mosaic"?0:10*sc);c.clip();c.drawImage(im,-dw/2,-dh/2,dw,dh);if($("hcDark").checked){c.fillStyle="rgba(0,0,0,.2)";c.fillRect(-p.w/2,-p.h/2,p.w,p.h)}c.restore();
-if(style!=="mosaic"){c.save();c.translate(p.x+p.w/2,p.y+p.h-12*sc);c.rotate(p.a);c.font="600 "+Math.max(12,15*sc)+"px Inter,sans-serif";c.textAlign="center";c.fillStyle="#fff";c.shadowColor="#000";c.shadowBlur=7*sc;c.fillText(p.p.name.slice(0,30),0,0,p.w*.9);c.restore()}});
-const g=c.createLinearGradient(0,0,0,H);g.addColorStop(0,"rgba(0,0,0,.08)");g.addColorStop(1,$("hcDark").checked?"rgba(0,0,0,.82)":"rgba(0,0,0,.38)");c.fillStyle=g;c.fillRect(0,0,W,H);
-const v=c.createRadialGradient(W/2,H/2,H*.2,W/2,H/2,W*.72);v.addColorStop(0,"transparent");v.addColorStop(1,"rgba(0,0,0,.52)");c.fillStyle=v;c.fillRect(0,0,W,H);
+if(!n)return;
+const cover=(im,x,y,w,h)=>{const z=Math.max(w/im.width,h/im.height),dw=im.width*z,dh=im.height*z;c.drawImage(im,x+(w-dw)/2,y+(h-dh)/2,dw,dh)};
+if(style==="diagonal"){
+  // Fundo contínuo: amplia uma arte e desfoca para não deixar vazios nas bordas.
+  c.save();c.filter="blur("+Math.round(24*sc)+"px)";cover(imgs[0].im,-35*sc,-35*sc,W+70*sc,H+70*sc);c.restore();
+  c.fillStyle="rgba(3,6,14,.48)";c.fillRect(0,0,W,H);
+  // Grade regular de painéis paralelos: inclinação uniforme e intervalo constante.
+  const cols=Math.ceil(Math.sqrt(n*W/H)),rows=Math.ceil(n/cols),gap=Math.max(8,12*sc),cellW=W/cols,cellH=H/rows;
+  const angle=-8*Math.PI/180,cardW=cellW-gap,cardH=cellH-gap;
+  const items=imgs.map((p,i)=>({p,i,row:Math.floor(i/cols),col:i%cols}));
+  items.forEach(({p,row,col})=>{
+    const x=col*cellW+cellW/2+(row%2?cellW*.18:0),y=row*cellH+cellH/2;
+    c.save();c.translate(x,y);c.rotate(angle);
+    const w=cardW*1.02,h=cardH*1.02;
+    c.shadowColor="rgba(0,0,0,.5)";c.shadowBlur=14*sc;c.shadowOffsetY=5*sc;
+    c.fillStyle="#080b12";c.fillRect(-w/2,-h/2,w,h);
+    c.shadowColor="transparent";c.beginPath();c.rect(-w/2,-h/2,w,h);c.clip();cover(p.im,-w/2,-h/2,w,h);
+    c.fillStyle="rgba(0,0,0,.22)";c.fillRect(-w/2,-h/2,w,h);
+    const fs=Math.max(12,15*sc);c.font="700 "+fs+"px Inter,sans-serif";c.textAlign="left";c.textBaseline="bottom";c.fillStyle="#fff";c.shadowColor="#000";c.shadowBlur=7*sc;
+    c.fillText(p.name.slice(0,32),-w/2+12*sc,h/2-10*sc,w-24*sc);
+    c.restore();
+  });
+}else{
+  const cols=Math.ceil(Math.sqrt(n*W/H)),rows=Math.ceil(n/cols),cellW=W/cols,cellH=H/rows,gap=style==="mosaic"?0:Math.max(5,10*sc);
+  imgs.forEach((p,i)=>{const row=Math.floor(i/cols),col=i%cols;let w=cellW-gap,h=cellH-gap,x=col*cellW+gap/2,y=row*cellH+gap/2,a=0;
+    if(style==="strips"){h*=.82;y+=cellH*.09;a=(row%2?-.012:.012)}
+    c.save();c.translate(x+w/2,y+h/2);c.rotate(a);const z=Math.max(w/p.im.width,h/p.im.height),dw=p.im.width*z,dh=p.im.height*z;c.beginPath();c.rect(-w/2,-h/2,w,h);c.clip();c.drawImage(p.im,-dw/2,-dh/2,dw,dh);
+    if($("hcDark").checked){c.fillStyle="rgba(0,0,0,.2)";c.fillRect(-w/2,-h/2,w,h)}c.restore();
+  });
+}
+const g=c.createLinearGradient(0,0,0,H);g.addColorStop(0,"rgba(0,0,0,.06)");g.addColorStop(1,$("hcDark").checked?"rgba(0,0,0,.72)":"rgba(0,0,0,.28)");c.fillStyle=g;c.fillRect(0,0,W,H);
+const v=c.createRadialGradient(W/2,H/2,H*.2,W/2,H/2,W*.72);v.addColorStop(0,"transparent");v.addColorStop(1,"rgba(0,0,0,.34)");c.fillStyle=v;c.fillRect(0,0,W,H);
 if($("hcText").checked){c.font="800 "+Math.round(78*sc)+"px Inter,sans-serif";c.fillStyle="#fff";c.textAlign="left";c.shadowColor="#000";c.shadowBlur=18*sc;c.fillText((title||"").toUpperCase(),90*sc,H-125*sc,W-180*sc);const sub=$("hcSubtitle").value.trim();if(sub){c.font="500 "+Math.round(27*sc)+"px Inter,sans-serif";c.fillStyle="rgba(255,255,255,.85)";c.fillText(sub,94*sc,H-75*sc,W-188*sc)}}
 c.strokeStyle="rgba(255,255,255,.18)";c.lineWidth=2*sc;c.strokeRect(1,1,W-2,H-2)}
+
 async function make(type,value,name){const found=await discover(type,value);if(!found.length)throw Error("Nenhum título encontrado.");const imgs=await images(found);if(imgs.length<2)throw Error("Imagens insuficientes para "+name);const c=document.createElement("canvas");paint(c,imgs,name);return{canvas:c,imgs}}
 const slug=s=>String(s).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").slice(0,60)||"hero";
 const blob=c=>new Promise((ok,no)=>c.toBlob(b=>b?ok(b):no(Error("Falha ao exportar.")),"image/png"));
