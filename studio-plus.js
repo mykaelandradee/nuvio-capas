@@ -481,7 +481,7 @@ function init(){
   /* ordem das opções: descoberta, criação, acabamento e exportação */
   const panel=document.querySelector(".panel");
   if(panel){
-    const preferred=["Como usar","Buscar no TMDB","Estilos prontos","Título: texto e logo","Formato","Fundo","Cores e degradê","Efeitos","Profundidade","Estilos salvos","Coleção em lote","Exportação"];
+    const preferred=["Como usar","Buscar no TMDB","Hero de Coleções NOVO","Estilos prontos","Título: texto e logo","Formato","Fundo","Cores e degradê","Efeitos","Profundidade","Estilos salvos","Coleção em lote","Exportação"];
     const sections=[...panel.querySelectorAll(":scope > details")];
     const ordered=preferred.map(name=>sections.find(d=>d.querySelector("summary")?.textContent.trim()===name)).filter(Boolean);
     sections.filter(d=>!ordered.includes(d)).forEach(d=>ordered.push(d));
