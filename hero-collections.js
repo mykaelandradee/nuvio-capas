@@ -39,29 +39,40 @@ const media=$("hcMedia").value==="both"?["movie","tv"]:[$("hcMedia").value],list
 async function images(items){return(await Promise.all(items.filter(x=>x.backdrop_path).slice(0,+$("hcNumTitles").value).map(async x=>{try{const r=await fetch(IMG+"w780"+x.backdrop_path);if(!r.ok)return null;return{im:await createImageBitmap(await r.blob()),name:x.title||x.name||"Título"}}catch{return null}}))).filter(Boolean)}
 function paint(cv,imgs,title){
 const W=+$("hcRes").value,H=W*9/16,sc=W/1920,c=cv.getContext("2d"),style=$("hcStyle").value,n=imgs.length;
-cv.width=W;cv.height=H;c.fillStyle="#070910";c.fillRect(0,0,W,H);
+cv.width=W;cv.height=H;c.fillStyle="#080a10";c.fillRect(0,0,W,H);
 if(!n)return;
 const cover=(im,x,y,w,h)=>{const z=Math.max(w/im.width,h/im.height),dw=im.width*z,dh=im.height*z;c.drawImage(im,x+(w-dw)/2,y+(h-dh)/2,dw,dh)};
 if(style==="diagonal"){
-  // Fundo contínuo: amplia uma arte e desfoca para não deixar vazios nas bordas.
-  c.save();c.filter="blur("+Math.round(24*sc)+"px)";cover(imgs[0].im,-35*sc,-35*sc,W+70*sc,H+70*sc);c.restore();
-  c.fillStyle="rgba(3,6,14,.48)";c.fillRect(0,0,W,H);
-  // Grade regular de painéis paralelos: inclinação uniforme e intervalo constante.
-  const cols=Math.ceil(Math.sqrt(n*W/H)),rows=Math.ceil(n/cols),gap=Math.max(8,12*sc),cellW=W/cols,cellH=H/rows;
-  const angle=-8*Math.PI/180,cardW=cellW-gap,cardH=cellH-gap;
-  const items=imgs.map((p,i)=>({p,i,row:Math.floor(i/cols),col:i%cols}));
-  items.forEach(({p,row,col})=>{
-    const x=col*cellW+cellW/2+(row%2?cellW*.18:0),y=row*cellH+cellH/2;
-    c.save();c.translate(x,y);c.rotate(angle);
-    const w=cardW*1.02,h=cardH*1.02;
-    c.shadowColor="rgba(0,0,0,.5)";c.shadowBlur=14*sc;c.shadowOffsetY=5*sc;
-    c.fillStyle="#080b12";c.fillRect(-w/2,-h/2,w,h);
-    c.shadowColor="transparent";c.beginPath();c.rect(-w/2,-h/2,w,h);c.clip();cover(p.im,-w/2,-h/2,w,h);
-    c.fillStyle="rgba(0,0,0,.22)";c.fillRect(-w/2,-h/2,w,h);
-    const fs=Math.max(12,15*sc);c.font="700 "+fs+"px Inter,sans-serif";c.textAlign="left";c.textBaseline="bottom";c.fillStyle="#fff";c.shadowColor="#000";c.shadowBlur=7*sc;
-    c.fillText(p.name.slice(0,32),-w/2+12*sc,h/2-10*sc,w-24*sc);
-    c.restore();
-  });
+  // Replica a geometria "Mural Inclinado" do Backdrop Studio:
+  // a grade inteira recebe uma única rotação; colunas alternadas são deslocadas verticalmente.
+  const angle=-12*Math.PI/180,gap=14*sc,columns=5;
+  const diagonal=Math.hypot(W,H),diagonalVirtual=Math.hypot(W,H);
+  const aspect=16/9,cardW=(diagonal*1.12)/columns,cardH=cardW/aspect;
+  const cos=Math.abs(Math.cos(angle)),sin=Math.abs(Math.sin(angle));
+  const cols=Math.max(columns,Math.ceil((diagonalVirtual*1.12)/(cardW+gap)));
+  const rows=Math.ceil((diagonalVirtual*1.35)/(cardH+gap))+2;
+  const stagger=0.32;
+  const startX=(W-cols*(cardW+gap))/2;
+  // O fundo é preenchido com uma das próprias artes, ampliada, sem áreas transparentes.
+  c.save();c.filter="blur("+Math.round(18*sc)+"px)";cover(imgs[0].im,-30*sc,-30*sc,W+60*sc,H+60*sc);c.restore();
+  c.fillStyle="rgba(5,7,12,.22)";c.fillRect(0,0,W,H);
+  c.save();c.translate(W/2,H/2);c.rotate(angle);c.translate(-W/2,-H/2);
+  for(let col=0;col<cols;col++){
+    const shift=(col%2?1:-1)*cardH*stagger;
+    const startY=(H-rows*(cardH+gap))/2+shift;
+    for(let row=0;row<rows;row++){
+      const index=(col*rows+row)%n,p=imgs[index];
+      const x=startX+col*(cardW+gap),y=startY+row*(cardH+gap);
+      c.save();
+      c.shadowColor="rgba(0,0,0,.38)";c.shadowBlur=10*sc;c.shadowOffsetY=3*sc;
+      c.fillStyle="#080a10";c.fillRect(x-gap/2,y-gap/2,cardW+gap,cardH+gap);
+      c.shadowColor="transparent";c.beginPath();c.rect(x,y,cardW,cardH);c.clip();
+      cover(p.im,x,y,cardW,cardH);
+      if($("hcDark").checked){c.fillStyle="rgba(0,0,0,.15)";c.fillRect(x,y,cardW,cardH)}
+      c.restore();
+    }
+  }
+  c.restore();
 }else{
   const cols=Math.ceil(Math.sqrt(n*W/H)),rows=Math.ceil(n/cols),cellW=W/cols,cellH=H/rows,gap=style==="mosaic"?0:Math.max(5,10*sc);
   imgs.forEach((p,i)=>{const row=Math.floor(i/cols),col=i%cols;let w=cellW-gap,h=cellH-gap,x=col*cellW+gap/2,y=row*cellH+gap/2,a=0;
@@ -70,8 +81,8 @@ if(style==="diagonal"){
     if($("hcDark").checked){c.fillStyle="rgba(0,0,0,.2)";c.fillRect(-w/2,-h/2,w,h)}c.restore();
   });
 }
-const g=c.createLinearGradient(0,0,0,H);g.addColorStop(0,"rgba(0,0,0,.06)");g.addColorStop(1,$("hcDark").checked?"rgba(0,0,0,.72)":"rgba(0,0,0,.28)");c.fillStyle=g;c.fillRect(0,0,W,H);
-const v=c.createRadialGradient(W/2,H/2,H*.2,W/2,H/2,W*.72);v.addColorStop(0,"transparent");v.addColorStop(1,"rgba(0,0,0,.34)");c.fillStyle=v;c.fillRect(0,0,W,H);
+const g=c.createLinearGradient(0,0,0,H);g.addColorStop(0,"rgba(0,0,0,.05)");g.addColorStop(1,$("hcDark").checked?"rgba(0,0,0,.72)":"rgba(0,0,0,.28)");c.fillStyle=g;c.fillRect(0,0,W,H);
+const v=c.createRadialGradient(W/2,H/2,H*.2,W/2,H/2,W*.72);v.addColorStop(0,"transparent");v.addColorStop(1,"rgba(0,0,0,.30)");c.fillStyle=v;c.fillRect(0,0,W,H);
 if($("hcText").checked){c.font="800 "+Math.round(78*sc)+"px Inter,sans-serif";c.fillStyle="#fff";c.textAlign="left";c.shadowColor="#000";c.shadowBlur=18*sc;c.fillText((title||"").toUpperCase(),90*sc,H-125*sc,W-180*sc);const sub=$("hcSubtitle").value.trim();if(sub){c.font="500 "+Math.round(27*sc)+"px Inter,sans-serif";c.fillStyle="rgba(255,255,255,.85)";c.fillText(sub,94*sc,H-75*sc,W-188*sc)}}
 c.strokeStyle="rgba(255,255,255,.18)";c.lineWidth=2*sc;c.strokeRect(1,1,W-2,H-2)}
 
