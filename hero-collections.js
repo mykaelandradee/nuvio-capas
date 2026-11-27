@@ -23,7 +23,7 @@ field("Lote",'<select id="hcScope"><option value="one">Somente categoria selecio
 '<div class="hc-actions"><button class="ghost" id="hcPreview">Gerar prévia</button><button class="primary" id="hcSave">Baixar PNG</button></div>'+
 '<div class="hc-actions"><button class="ghost" id="hcBatch">Gerar lote ZIP</button><button class="ghost" id="hcCancel" hidden>Cancelar</button></div><progress id="hcProgress" value="0" max="100"></progress><p class="hc-status" id="hcStatus">Informe o token TMDB na seção Buscar no TMDB.</p><div class="hc-items" id="hcItems"></div>'+
 '<p class="hc-note">Composição feita localmente no navegador. As imagens são fornecidas pelo TMDB; o token permanece no armazenamento local.</p></div>';
-const b=[...p.querySelectorAll(":scope>details")].find(x=>x.querySelector("summary")?.textContent.trim()==="Coleção em lote");p.insertBefore(d,b||null)}
+p.insertBefore(d,p.firstElementChild)}
 function token(){const v=($("tkey")?.value||"").trim().replace(/^Bearer\s+/i,"");if(!v)throw Error("Informe seu API Read Access Token na seção Buscar no TMDB.");return v}
 async function tm(path,params={}){const k=token(),u=new URL(API+path),h={};Object.entries(params).forEach(([a,b])=>{if(b!==""&&b!=null)u.searchParams.set(a,b)});if(k.startsWith("eyJ"))h.Authorization="Bearer "+k;else u.searchParams.set("api_key",k);const r=await fetch(u,{headers:h});if(!r.ok)throw Error("TMDB respondeu com erro "+r.status);return r.json()}
 const popular=(a,b)=>(b.popularity||0)-(a.popularity||0)||(b.vote_count||0)-(a.vote_count||0),unique=a=>[...new Map(a.filter(x=>x?.id).map(x=>[x.id,x])).values()];
