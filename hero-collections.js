@@ -73,13 +73,42 @@ if(style==="diagonal"){
     }
   }
   c.restore();
+}else if(style==="mosaic"){
+  // Mosaico uniforme: grade densa que cobre a tela inteira, sem sobras.
+  const cols=5,rows=5,gap=10*sc,cellW=W/cols,cellH=H/rows;
+  for(let row=0;row<rows;row++)for(let col=0;col<cols;col++){
+    const i=row*cols+col,p=imgs[(i*7+Math.floor(i/cols)*3)%n];
+    const x=col*cellW+gap/2,y=row*cellH+gap/2,w=cellW-gap,h=cellH-gap;
+    c.save();c.shadowColor="rgba(0,0,0,.4)";c.shadowBlur=8*sc;c.shadowOffsetY=2*sc;
+    c.fillStyle="#080a10";c.fillRect(x-gap/2,y-gap/2,w+gap,h+gap);
+    c.shadowColor="transparent";c.beginPath();c.rect(x,y,w,h);c.clip();cover(p.im,x,y,w,h);
+    if($("hcDark").checked){c.fillStyle="rgba(0,0,0,.12)";c.fillRect(x,y,w,h)}
+    c.restore();
+  }
 }else{
-  const cols=Math.ceil(Math.sqrt(n*W/H)),rows=Math.ceil(n/cols),cellW=W/cols,cellH=H/rows,gap=style==="mosaic"?0:Math.max(5,10*sc);
-  imgs.forEach((p,i)=>{const row=Math.floor(i/cols),col=i%cols;let w=cellW-gap,h=cellH-gap,x=col*cellW+gap/2,y=row*cellH+gap/2,a=0;
-    if(style==="strips"){h*=.82;y+=cellH*.09;a=(row%2?-.012:.012)}
-    c.save();c.translate(x+w/2,y+h/2);c.rotate(a);const z=Math.max(w/p.im.width,h/p.im.height),dw=p.im.width*z,dh=p.im.height*z;c.beginPath();c.rect(-w/2,-h/2,w,h);c.clip();c.drawImage(p.im,-dw/2,-dh/2,dw,dh);
-    if($("hcDark").checked){c.fillStyle="rgba(0,0,0,.2)";c.fillRect(-w/2,-h/2,w,h)}c.restore();
-  });
+  // Faixas dinâmicas: linhas largas e paralelas, com deslocamento alternado.
+  const angle=-12*Math.PI/180,gap=14*sc,rowsUser=3;
+  const diagonal=Math.hypot(W,H),diagonalVirtual=Math.hypot(W,H);
+  const rowH=(diagonal*1.15)/rowsUser,cardW=rowH*(16/9);
+  const rows=Math.max(rowsUser,Math.ceil((diagonalVirtual*1.15)/(rowH+gap)));
+  const cols=Math.ceil((diagonalVirtual*1.4)/(cardW+gap))+2;
+  const stagger=.8,startY=(H-rows*(rowH+gap))/2;
+  c.save();c.translate(W/2,H/2);c.rotate(angle);c.translate(-W/2,-H/2);
+  for(let row=0;row<rows;row++){
+    const offset=(row%2?1:-1)*cardW*stagger;
+    const startX=(W-cols*(cardW+gap))/2+offset;
+    for(let col=0;col<cols;col++){
+      const i=row*cols+col,p=imgs[(i*7+row*3)%n];
+      const x=startX+col*(cardW+gap),y=startY+row*(rowH+gap);
+      c.save();c.shadowColor="rgba(0,0,0,.42)";c.shadowBlur=10*sc;c.shadowOffsetY=3*sc;
+      c.fillStyle="#080a10";c.fillRect(x-gap/2,y-gap/2,cardW+gap,rowH+gap);
+      c.shadowColor="transparent";c.beginPath();c.rect(x,y,cardW,rowH);c.clip();cover(p.im,x,y,cardW,rowH);
+      if($("hcDark").checked){c.fillStyle="rgba(0,0,0,.14)";c.fillRect(x,y,cardW,rowH)}
+      c.restore();
+    }
+  }
+  c.restore();
+}
 }
 const g=c.createLinearGradient(0,0,0,H);g.addColorStop(0,"rgba(0,0,0,.05)");g.addColorStop(1,$("hcDark").checked?"rgba(0,0,0,.72)":"rgba(0,0,0,.28)");c.fillStyle=g;c.fillRect(0,0,W,H);
 const v=c.createRadialGradient(W/2,H/2,H*.2,W/2,H/2,W*.72);v.addColorStop(0,"transparent");v.addColorStop(1,"rgba(0,0,0,.30)");c.fillStyle=v;c.fillRect(0,0,W,H);
