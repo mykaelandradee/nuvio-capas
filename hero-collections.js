@@ -1,6 +1,6 @@
 /* Hero de Coleções — módulo independente do editor principal */
 (()=>{"use strict";
-const $=id=>document.getElementById(id),API="https://api.themoviedb.org/3",IMG="https://image.tmdb.org/t/p/";
+const $=id=>document.getElementById(id),IMG="https://image.tmdb.org/t/p/";
 const S={current:null,busy:false,cancel:false,dirty:true};
 const style=document.createElement("style");
 style.textContent="#hcPanel .hc-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}#hcPanel .hc-full{grid-column:1/-1}#hcPanel .hc-status,#hcPanel .hc-note{font-size:12px;color:var(--muted);line-height:1.5}.view .hc-preview{display:none;width:100%;margin:0;border:0;border-radius:10px;overflow:hidden;background:#070910}.view.hc-active{display:block;min-height:0;padding:0}.view.hc-active #cv,.view.hc-active .drop{display:none}.view.hc-active .hc-preview{display:block}.view .hc-preview canvas{display:block;width:100%;height:auto;max-height:none;box-shadow:none;border-radius:0}#hcPanel .hc-status{min-height:18px;margin:8px 0}#hcPanel .hc-actions{display:flex;gap:8px;margin:8px 0}#hcPanel .hc-actions>*{flex:1}#hcPanel progress{width:100%;height:8px}#hcPanel .hc-items{display:grid;gap:5px;max-height:180px;overflow:auto}#hcPanel .hc-item{background:var(--chip);border-radius:8px;padding:7px 9px;font-size:12px;display:flex;justify-content:space-between;gap:8px}@media(max-width:420px){#hcPanel .hc-grid{grid-template-columns:1fr}}";
@@ -24,8 +24,7 @@ field("Lote",'<select id="hcScope"><option value="one">Somente categoria selecio
 '<div class="hc-actions"><button class="ghost" id="hcBatch">Gerar lote ZIP</button><button class="ghost" id="hcCancel" hidden>Cancelar</button></div><progress id="hcProgress" value="0" max="100"></progress><p class="hc-status" id="hcStatus">Informe o token TMDB na seção Buscar no TMDB.</p><div class="hc-items" id="hcItems"></div>'+
 '<p class="hc-note">Composição feita localmente no navegador. As imagens são fornecidas pelo TMDB; o token permanece no armazenamento local.</p></div>';
 p.insertBefore(d,p.firstElementChild)}
-function token(){const v=($("tkey")?.value||"").trim().replace(/^Bearer\s+/i,"");if(!v)throw Error("Informe seu API Read Access Token na seção Buscar no TMDB.");return v}
-async function tm(path,params={}){const k=token(),u=new URL(API+path),h={},ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),12000);Object.entries(params).forEach(([a,b])=>{if(b!==""&&b!=null)u.searchParams.set(a,b)});if(k.startsWith("eyJ"))h.Authorization="Bearer "+k;else u.searchParams.set("api_key",k);try{const r=await fetch(u,{headers:h,signal:ctl.signal});if(!r.ok)throw Error("TMDB respondeu com erro "+r.status);return await r.json()}catch(e){if(e.name==="AbortError")throw Error("O TMDB demorou mais de 12 segundos para responder. Verifique a conexão e tente novamente.");throw e}finally{clearTimeout(timer)}}
+async function tm(path,params={}){if(typeof window.tm!=="function")throw Error("O mecanismo de conexão com o TMDB não foi inicializado.");return window.tm(path,params)}
 const popular=(a,b)=>(b.popularity||0)-(a.popularity||0)||(b.vote_count||0)-(a.vote_count||0),unique=a=>[...new Map(a.filter(x=>x?.id).map(x=>[x.id,x])).values()];
 const label=()=>$("hcTarget").selectedOptions[0]?.textContent||"Coleção",say=t=>$("hcStatus").textContent=t;
 async function loadOptions(){const t=$("hcType").value,m=$("hcMedia").value==="tv"?"tv":"movie",s=$("hcTarget");s.innerHTML="";s.add(new Option("Carregando opções…",""));say("Conectando ao TMDB para carregar as categorias…");
