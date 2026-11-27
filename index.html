@@ -237,14 +237,10 @@ input[type=color]{width:100%;height:42px;border:0;border-radius:12px;background:
     <label class="chk"><input type="checkbox" id="bTmdb" checked> Buscar imagens de cada item no TMDB (usa o tipo de busca e a opção de logo acima)</label>
     <p class="msg">Sagas: busca a identidade visual da franquia sem acrescentar o nome da edição e escolhe fundos de filmes da própria saga para capa e hero. Pessoas: retratos. Estúdios: logos oficiais.</p>
     <progress id="bProgress" max="100" value="0" style="width:100%;height:8px"></progress>
-    <div id="bItems" class="chips" aria-live="polite"></div>
-    <button class="ghost full" id="bRetry" hidden>Repetir somente as falhas</button>
-    <label class="chk"><input type="checkbox" id="bAutoText" checked> Usar o nome genérico encontrado no TMDB como texto</label>
+        <label class="chk"><input type="checkbox" id="bAutoText" checked> Usar o nome genérico encontrado no TMDB como texto</label>
     <label class="chk"><input type="checkbox" id="bCover" checked> Gerar capa</label>
     <label class="chk"><input type="checkbox" id="bLogo" checked> Gerar logo</label>
     <label class="chk"><input type="checkbox" id="bHero"> Gerar fundo do hero</label>
-    <button class="primary full" id="bGo">Gerar coleção (ZIP)</button>
-    <button class="ghost full" id="restoreDefaults">Restaurar padrões</button>
     <p class="msg" id="bmsg"></p>
   </div></details>
 
@@ -568,63 +564,8 @@ $("zipBtn").onclick=async()=>{if(typeof JSZip==="undefined")return msg("Não foi
   await addToZip(z,s+"-capa-16x9","cover","land");await addToZip(z,s+"-capa-2x3","cover","poster");await addToZip(z,s+"-capa-1x1","cover","square");await addToZip(z,s+"-logo","logo");await addToZip(z,s+"-hero","hero");
   await saveBlob(await z.generateAsync({type:"blob"}),s+"-nuvio.zip")};
 
-/* lote */
+/* Mensagens do fluxo de lote mantido em studio-plus.js */
 const bmsg=(t,v)=>{$("bmsg").textContent=tr(t,v)};
-let batchFailed=[];
-function batchRow(name,status){
-  const row=document.createElement("div");row.className="msg";row.textContent=name+" — "+status;$("bItems").appendChild(row);
-}
-async function runBatch(names){
-  const outs=[["cover",$("bCover").checked],["logo",$("bLogo").checked],["hero",$("bHero").checked]].filter(x=>x[1]).map(x=>x[0]);
-  if(!outs.length)throw new Error("outputs");
-  if(typeof JSZip==="undefined")throw new Error("zip");
-  const keep={text:o.text,bg:o.bg,bgBlob:o.bgBlob,cut:o.cut,img:o.img},z=new JSZip();
-  const useTm=$("bTmdb").checked,failed=[],total=names.length;
-  $("bGo").disabled=true;$("bRetry").hidden=true;$("bItems").innerHTML="";$("bProgress").value=0;
-  try{
-    for(let i=0;i<total;i++){
-      const original=names[i],raw=original.replace(/\s*\|\s*/g,"\n");
-      let ok=true;
-      bmsg("Gerando {a} de {b}: {c}",{a:i+1,b:total,c:original});
-      o.text=raw;o.bg=keep.bg;o.bgBlob=keep.bgBlob;o.img=keep.img;o.cut=keep.cut;
-      if(useTm){
-        try{
-          const r=await tmBest(original.replace(/\s*\|\s*/g," "));
-          if(r.kind==="movie"&&(outs.includes("cover")||outs.includes("hero"))&&(!r.backs||!r.backs.length))throw new Error("no-backdrop");
-          if(r.backs&&r.backs.length){
-            const p=r.backs[Math.floor(Math.random()*r.backs.length)],blob=await tmImg(p.file_path,p.profile?"original":"w1280");
-            o.bg=await blobImg(blob);o.bgBlob=blob;o.cut=null;
-          }
-          o.img=r.logos&&r.logos[0]?await blobImg(await tmImg(r.logos[0].file_path,"original")):null;
-          if($("bAutoText").checked)o.text=r.logos&&r.logos.length?"":String(r.text||r.name||raw).replace(/\s*\|\s*/g,"\n");
-        }catch(e){
-          ok=false;failed.push(original);
-          o.bg=keep.bg;o.bgBlob=keep.bgBlob;o.img=keep.img;o.cut=keep.cut;
-        }
-      }
-      try{await document.fonts.load(fnt(100),o.text)}catch(e){}
-      for(const m of outs){
-        if(m==="cover")await addToZip(z,String(i+1).padStart(2,"0")+"-"+slug(raw)+"-capa-"+o.fmt,m,o.fmt);
-        else await addToZip(z,String(i+1).padStart(2,"0")+"-"+slug(raw)+"-"+(m==="logo"?"logo":"hero"),m,o.fmt);
-      }
-      batchRow(original,ok?tr("Concluído"):tr("Fallback usado; imagens do TMDB não carregaram"));
-      $("bProgress").value=Math.round((i+1)/total*100);
-    }
-    batchFailed=failed;$("bRetry").hidden=!failed.length;
-    await saveBlob(await z.generateAsync({type:"blob"}),"colecao-nuvio.zip");
-    bmsg(failed.length?"ZIP gerado: {n} itens. {f} com fallback; revise a lista e repita as falhas.":"ZIP gerado: {n} itens.",{n:total,f:failed.length});
-  }finally{Object.assign(o,keep);$("bGo").disabled=false;sync();render()}
-}
-$("bGo").onclick=async()=>{
-  const names=$("bText").value.split("\n").map(s=>s.trim()).filter(Boolean).slice(0,40);
-  if(!names.length)return bmsg("Escreva um nome por linha.");
-  try{await runBatch(names)}catch(e){bmsg(e.message==="outputs"?"Marque pelo menos um tipo de arquivo.":e.message==="zip"?"Não foi possível carregar o módulo de ZIP.":"Algo deu errado no lote. Confira o token do TMDB e tente de novo.")}
-};
-$("bRetry").onclick=async()=>{
-  if(!batchFailed.length)return;
-  try{await runBatch([...batchFailed])}catch(e){bmsg("Não foi possível repetir as falhas.")}
-};
-
 /* configurações, paletas e estilos */
 function cfgNow(){const s={};PK.forEach(k=>s[k]=o[k]);return s}
 function applyCfg(s){if(!s||typeof s!=="object")return;PK.forEach(k=>{if(!(k in s))return;const v=s[k];if(typeof v!==typeof D[k])return;
@@ -667,12 +608,11 @@ function restoreDefaults(){
   msg("Tudo foi redefinido para o padrão.");
 }
 $("resetTop").onclick=()=>{if(window.confirm("Restaurar todas as configurações e remover as imagens atuais?"))restoreDefaults()};
-$("restoreDefaults").onclick=()=>{if(window.confirm("Restaurar configurações, opções do lote e remover as imagens atuais?"))restoreDefaults()};
 document.querySelectorAll("details[data-reset]").forEach(d=>{const b=document.createElement("button");b.className="ghost full";b.textContent="Redefinir esta seção";b.onclick=()=>{d.dataset.reset.split(",").forEach(k=>o[k]=D[k]);sync();render();msg("Seção redefinida.")};d.querySelector(".body").appendChild(b)});
 $("lang").onclick=()=>{lang=lang==="pt"?"en":"pt";try{localStorage.setItem("nuvio_lang",lang)}catch(e){}applyLang()};
 drawPal();drawStyles();sync();applyMode();collect();applyLang();render();
 </script>
 <script src="studio-plus.js?v=2"></script>
-<script src="hero-collections.js?v=9"></script>
+<script src="hero-collections.js?v=10"></script>
 </body>
 </html>
